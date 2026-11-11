@@ -1,0 +1,125 @@
+{
+  "_nota": "Precios y existencias DE EJEMPLO. Reemplázalos con los reales antes de publicar. Las marcas (u, v de 0 a 1) ubican cada detalle en el modelo 3D.",
+  "productos": [
+    {
+      "id": "ip17pm-256-plata", "nombre": "iPhone 17 Pro Max", "familia": "iphone", "estado": "nuevo",
+      "precio": 6899000, "capacidad": "256 GB", "color": { "nombre": "Plata", "hex": "#e3e4e1" },
+      "garantia": "1 año con Apple", "incluye": ["Cable USB-C", "Caja original sellada"], "destacado": true, "stock": 4,
+      "specs": { "Pantalla": "6,9\" Super Retina XDR, ProMotion", "Chip": "A19 Pro", "Cámaras": "Triple 48 MP", "Batería": "Hasta 37 h de video" },
+      "modelo": { "alto": 163, "ancho": 78, "grosor": 8.8, "modulo": "barra", "lentes": 3 }
+    },
+    {
+      "id": "ip17p-256-naranja", "nombre": "iPhone 17 Pro", "familia": "iphone", "estado": "nuevo",
+      "precio": 5999000, "capacidad": "256 GB", "color": { "nombre": "Naranja cósmico", "hex": "#d9733a" },
+      "garantia": "1 año con Apple", "incluye": ["Cable USB-C", "Caja original sellada"], "destacado": true, "stock": 3,
+      "specs": { "Pantalla": "6,3\" Super Retina XDR, ProMotion", "Chip": "A19 Pro", "Cámaras": "Triple 48 MP", "Batería": "Hasta 31 h de video" },
+      "modelo": { "alto": 150, "ancho": 72, "grosor": 8.8, "modulo": "barra", "lentes": 3 }
+    },
+    {
+      "id": "ipair-256-azul", "nombre": "iPhone Air", "familia": "iphone", "estado": "nuevo",
+      "precio": 5299000, "capacidad": "256 GB", "color": { "nombre": "Azul cielo", "hex": "#c9d9ea" },
+      "garantia": "1 año con Apple", "incluye": ["Cable USB-C", "Caja original sellada"], "stock": 2,
+      "specs": { "Pantalla": "6,5\" Super Retina XDR, ProMotion", "Chip": "A19 Pro", "Cámaras": "48 MP Fusion", "Grosor": "5,6 mm" },
+      "modelo": { "alto": 156, "ancho": 75, "grosor": 5.6, "modulo": "barra", "lentes": 1 }
+    },
+    {
+      "id": "ip17-256-salvia", "nombre": "iPhone 17", "familia": "iphone", "estado": "nuevo",
+      "precio": 4299000, "capacidad": "256 GB", "color": { "nombre": "Salvia", "hex": "#b7c3a6" },
+      "garantia": "1 año con Apple", "incluye": ["Cable USB-C", "Caja original sellada"], "destacado": true, "stock": 6,
+      "specs": { "Pantalla": "6,3\" Super Retina XDR, ProMotion", "Chip": "A19", "Cámaras": "Doble 48 MP", "Batería": "Hasta 30 h de video" },
+      "modelo": { "alto": 150, "ancho": 72, "grosor": 7.9, "modulo": "cuadro", "lentes": 2 }
+    },
+    {
+      "id": "ip16pm-u-256-desierto", "nombre": "iPhone 16 Pro Max", "familia": "iphone", "estado": "usado",
+      "precio": 4390000, "precioNuevo": 5899000, "capacidad": "256 GB", "color": { "nombre": "Titanio desierto", "hex": "#bfa48c" },
+      "grado": "A+", "bateria": 94, "garantia": "6 meses Atlanta", "incluye": ["Cable USB-C", "Vidrio templado instalado"], "destacado": true, "stock": 1,
+      "specs": { "Pantalla": "6,9\" Super Retina XDR", "Chip": "A18 Pro", "Cámaras": "Triple 48 MP", "Face ID": "Funciona perfecto" },
+      "modelo": { "alto": 163, "ancho": 77.6, "grosor": 8.25, "modulo": "cuadro", "lentes": 3 },
+      "marcas": [
+        { "cara": "marco-der", "u": 0.5, "v": 0.22, "texto": "Roce casi invisible en el marco derecho, cerca de los botones." }
+      ]
+    },
+    {
+      "id": "ip16p-u-128-negro", "nombre": "iPhone 16 Pro", "familia": "iphone", "estado": "usado",
+      "precio": 3690000, "precioNuevo": 4999000, "capacidad": "128 GB", "color": { "nombre": "Titanio negro", "hex": "#3b3a38" },
+      "grado": "A", "bateria": 89, "garantia": "6 meses Atlanta", "incluye": ["Cable USB-C"], "stock": 1,
+      "specs": { "Pantalla": "6,3\" Super Retina XDR", "Chip": "A18 Pro", "Cámaras": "Triple 48 MP", "Face ID": "Funciona perfecto" },
+      "modelo": { "alto": 149.6, "ancho": 71.5, "grosor": 8.25, "modulo": "cuadro", "lentes": 3 },
+      "marcas": [
+        { "cara": "trasera", "u": 0.7, "v": 0.78, "texto": "Rayón fino de 4 mm en el vidrio trasero. Solo se ve a contraluz." },
+        { "cara": "marco-inf", "u": 0.18, "v": 0.5, "texto": "Pequeño golpe en la esquina inferior izquierda." }
+      ]
+    },
+    {
+      "id": "ip15pm-u-256-azul", "nombre": "iPhone 15 Pro Max", "familia": "iphone", "estado": "usado",
+      "precio": 3290000, "precioNuevo": 4799000, "capacidad": "256 GB", "color": { "nombre": "Titanio azul", "hex": "#3f4a5a" },
+      "grado": "A", "bateria": 86, "garantia": "6 meses Atlanta", "incluye": ["Cable USB-C"], "destacado": true, "stock": 1,
+      "specs": { "Pantalla": "6,7\" Super Retina XDR", "Chip": "A17 Pro", "Cámaras": "Triple 48 MP, zoom 5x", "Face ID": "Funciona perfecto" },
+      "modelo": { "alto": 159.9, "ancho": 76.7, "grosor": 8.25, "modulo": "cuadro", "lentes": 3 },
+      "marcas": [
+        { "cara": "frontal", "u": 0.5, "v": 0.08, "texto": "Micro rayón en la pantalla, arriba. No se nota con la pantalla encendida." },
+        { "cara": "marco-izq", "u": 0.5, "v": 0.6, "texto": "Desgaste leve del titanio en el lado izquierdo." }
+      ]
+    },
+    {
+      "id": "ip15-u-128-rosa", "nombre": "iPhone 15", "familia": "iphone", "estado": "usado",
+      "precio": 2190000, "precioNuevo": 3299000, "capacidad": "128 GB", "color": { "nombre": "Rosa", "hex": "#f2d4d7" },
+      "grado": "A+", "bateria": 92, "garantia": "6 meses Atlanta", "incluye": ["Cable USB-C", "Forro de regalo"], "stock": 2,
+      "specs": { "Pantalla": "6,1\" Super Retina XDR", "Chip": "A16 Bionic", "Cámaras": "Doble 48 MP", "Face ID": "Funciona perfecto" },
+      "modelo": { "alto": 147.6, "ancho": 71.6, "grosor": 7.8, "modulo": "cuadro", "lentes": 2 },
+      "marcas": []
+    },
+    {
+      "id": "ip14p-u-128-morado", "nombre": "iPhone 14 Pro", "familia": "iphone", "estado": "usado",
+      "precio": 2290000, "precioNuevo": 3999000, "capacidad": "128 GB", "color": { "nombre": "Morado oscuro", "hex": "#4b4155" },
+      "grado": "B", "bateria": 83, "garantia": "3 meses Atlanta", "incluye": ["Cable Lightning"], "stock": 1,
+      "specs": { "Pantalla": "6,1\" Super Retina XDR, Dynamic Island", "Chip": "A16 Bionic", "Cámaras": "Triple 48 MP", "Face ID": "Funciona perfecto" },
+      "modelo": { "alto": 147.5, "ancho": 71.5, "grosor": 7.85, "modulo": "cuadro", "lentes": 3 },
+      "marcas": [
+        { "cara": "trasera", "u": 0.3, "v": 0.6, "texto": "Dos rayones leves en el vidrio trasero." },
+        { "cara": "marco-sup", "u": 0.8, "v": 0.5, "texto": "Golpe pequeño en la esquina superior derecha." },
+        { "cara": "frontal", "u": 0.6, "v": 0.55, "texto": "Rayón fino en pantalla, visible con la pantalla apagada." }
+      ]
+    },
+    {
+      "id": "ip13-u-128-medianoche", "nombre": "iPhone 13", "familia": "iphone", "estado": "usado",
+      "precio": 1590000, "precioNuevo": 2599000, "capacidad": "128 GB", "color": { "nombre": "Medianoche", "hex": "#232a31" },
+      "grado": "A", "bateria": 87, "garantia": "3 meses Atlanta", "incluye": ["Cable Lightning"], "stock": 3,
+      "specs": { "Pantalla": "6,1\" Super Retina XDR", "Chip": "A15 Bionic", "Cámaras": "Doble 12 MP", "Face ID": "Funciona perfecto" },
+      "modelo": { "alto": 146.7, "ancho": 71.5, "grosor": 7.65, "modulo": "cuadro", "lentes": 2 },
+      "marcas": [
+        { "cara": "marco-der", "u": 0.5, "v": 0.75, "texto": "Desgaste leve de la pintura del aluminio." }
+      ]
+    },
+    {
+      "id": "ipadair-m3-128", "nombre": "iPad Air 11\" M3", "familia": "ipad", "estado": "nuevo",
+      "precio": 3399000, "capacidad": "128 GB", "color": { "nombre": "Gris espacial", "hex": "#5a5c60" },
+      "garantia": "1 año con Apple", "incluye": ["Cable USB-C", "Caja original sellada"], "stock": 2,
+      "specs": { "Pantalla": "11\" Liquid Retina", "Chip": "M3", "Conexión": "Wi-Fi 6E" }
+    },
+    {
+      "id": "mba13-m4-256", "nombre": "MacBook Air 13\" M4", "familia": "mac", "estado": "nuevo",
+      "precio": 5199000, "capacidad": "16 GB / 256 GB", "color": { "nombre": "Azul cielo", "hex": "#b9c8d8" },
+      "garantia": "1 año con Apple", "incluye": ["Cargador USB-C 30 W", "Caja original sellada"], "destacado": true, "stock": 2,
+      "specs": { "Pantalla": "13,6\" Liquid Retina", "Chip": "M4, CPU 10 núcleos", "Batería": "Hasta 18 h" }
+    },
+    {
+      "id": "mbp14-m3-u-512", "nombre": "MacBook Pro 14\" M3 Pro", "familia": "mac", "estado": "usado",
+      "precio": 6290000, "precioNuevo": 9499000, "capacidad": "18 GB / 512 GB", "color": { "nombre": "Negro espacial", "hex": "#2b2c2e" },
+      "grado": "A", "bateria": 91, "garantia": "6 meses Atlanta", "incluye": ["Cargador MagSafe 70 W"], "stock": 1,
+      "specs": { "Pantalla": "14,2\" Liquid Retina XDR", "Chip": "M3 Pro", "Ciclos de batería": "142" }
+    },
+    {
+      "id": "airpodspro3", "nombre": "AirPods Pro 3", "familia": "accesorios", "estado": "nuevo",
+      "precio": 1199000, "capacidad": "Estuche USB-C", "color": { "nombre": "Blanco", "hex": "#f4f4f2" },
+      "garantia": "1 año con Apple", "incluye": ["Caja original sellada"], "stock": 5,
+      "specs": { "Audio": "Cancelación activa de ruido", "Extra": "Sensor de ritmo cardiaco" }
+    },
+    {
+      "id": "cargador-20w", "nombre": "Cargador Apple 20 W USB-C", "familia": "accesorios", "estado": "nuevo",
+      "precio": 129000, "capacidad": "20 W", "color": { "nombre": "Blanco", "hex": "#f4f4f2" },
+      "garantia": "1 año", "incluye": ["Original Apple"], "stock": 12,
+      "specs": { "Potencia": "20 W, carga rápida" }
+    }
+  ]
+}

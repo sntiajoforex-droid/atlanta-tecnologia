@@ -1,0 +1,10 @@
+node_modules/
+.env
+public/vendor/
+data/solicitudes.jsonl
+data/solicitudes_estado.json
+data/usuarios.json
+data/registro.jsonl
+data/respaldos/
+data/*.tmp
+data/fotos/
