@@ -1,5 +1,7 @@
 import { useDeferredValue, useMemo } from "react";
 import SpotlightCard from "../bits/SpotlightCard.jsx";
+import BlurText from "../bits/BlurText/BlurText.jsx";
+import Selector from "./Selector.jsx";
 import Imagen from "./Imagen.jsx";
 import { avisar, carritoApi, estadoTexto, pesos, sinTildes, tiene3D, variante } from "../util.js";
 
@@ -9,10 +11,10 @@ export const FILTRO_INICIAL = { estado: "todos", familia: "todas", q: "", orden:
 
 export const agregarAlCarrito = p => { const error = carritoApi.sumar(p); avisar(error || `${p.nombre} quedó en tu bolsa`); };
 
-function Tarjeta({ p, alAbrir, alVer3D }) {
+function Tarjeta({ p, i, alAbrir, alVer3D }) {
   const usado = p.estado === "usado";
   return (
-    <li>
+    <li style={{ "--i": Math.min(i, 11) }}>
       <SpotlightCard theme="light" className={`tarjeta${p.stock ? "" : " tarjeta--agotada"}`} spotlightColor="#8f7258" intensity={0.22} borderGlow={0.5} spotlightSize={260}>
         <button className="tarjeta__abrir" aria-label={`Ver ${p.nombre}, ${variante(p)}`} onClick={() => alAbrir(p)} />
         <div className="tarjeta__visual">
@@ -68,7 +70,8 @@ export default function Catalogo({ productos, cargando, error, filtro, setFiltro
   return (
     <section className="seccion catalogo marco" id="catalogo" aria-labelledby="titulo-catalogo">
       <div className="catalogo__cabeza">
-        <h2 id="titulo-catalogo">Equipos disponibles</h2>
+        <BlurText tag="h2" text="Equipos disponibles" className="titulo-animado" animateBy="words" delay={90} />
+        <span id="titulo-catalogo" hidden>Equipos disponibles</span>
         <p className="catalogo__cuenta" aria-live="polite">{cargando ? "Cargando…" : `${lista.length} de ${productos.length}`}</p>
       </div>
 
@@ -86,14 +89,8 @@ export default function Catalogo({ productos, cargando, error, filtro, setFiltro
           <span className="solo-lector">Buscar equipo</span>
           <input id="busqueda" type="search" placeholder="Buscar, ej. 15 Pro" autoComplete="off" value={filtro.q} onChange={e => cambiar({ q: e.target.value })} />
         </label>
-        <label className="orden">
-          <span className="solo-lector">Ordenar</span>
-          <select value={filtro.orden} onChange={e => cambiar({ orden: e.target.value })}>
-            <option value="destacados">Destacados</option>
-            <option value="menor">Menor precio</option>
-            <option value="mayor">Mayor precio</option>
-          </select>
-        </label>
+        <Selector etiqueta="Ordenar" visible={false} className="orden" valor={filtro.orden} alCambiar={v => cambiar({ orden: v })}
+          opciones={[["destacados", "Destacados"], ["menor", "Menor precio"], ["mayor", "Mayor precio"]]} />
       </div>
 
       {filtro.estado === "usado" && (
@@ -102,7 +99,12 @@ export default function Catalogo({ productos, cargando, error, filtro, setFiltro
 
       {error
         ? <p className="vacio">No pudimos cargar el catálogo. Recarga la página o escríbenos por WhatsApp.</p>
-        : <ul className="rejilla">{lista.map(p => <Tarjeta key={p.id} p={p} alAbrir={alAbrir} alVer3D={alVer3D} />)}</ul>}
+        : cargando
+          ? <ul className="rejilla" aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <li key={i} className="esqueleto"><span /><span /><span /></li>)}</ul>
+          /* La rejilla se rearma al cambiar de filtro para que los equipos entren escalonados (al escribir en el buscador no) */
+          : <ul className="rejilla rejilla--entrada" key={`${filtro.estado}-${filtro.familia}-${filtro.orden}`}>
+            {lista.map((p, i) => <Tarjeta key={p.id} p={p} i={i} alAbrir={alAbrir} alVer3D={alVer3D} />)}
+          </ul>}
       {!cargando && !error && !lista.length && (
         <p className="vacio">No hay equipos con esos filtros. <button className="enlace" onClick={() => setFiltro(FILTRO_INICIAL)}>Ver todos los equipos</button></p>
       )}

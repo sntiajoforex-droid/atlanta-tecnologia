@@ -6,7 +6,7 @@ import Ficha from "./componentes/Ficha.jsx";
 import Visor from "./componentes/Visor.jsx";
 import Bolsa from "./componentes/Bolsa.jsx";
 import { Credito, VendeTuEquipo } from "./componentes/Formularios.jsx";
-import { BotonWhatsapp, Garantias, Grados, Pie, Preguntas } from "./componentes/Secciones.jsx";
+import { BandaModelos, BotonWhatsapp, Garantias, Grados, Pie, Preguntas } from "./componentes/Secciones.jsx";
 import { useAviso, useCatalogo } from "./util.js";
 
 export default function App() {
@@ -30,6 +30,7 @@ export default function App() {
       <main id="principal">
         <Portada estrella={estrella} alVerSeminuevos={() => filtrarEstado("usado")} alVerNuevos={() => filtrarEstado("nuevo")} alInspeccionar={ver3D} />
         <Garantias />
+        <BandaModelos />
         <Catalogo productos={productos} cargando={cargando} error={error} filtro={filtro} setFiltro={setFiltro} alAbrir={setFicha} alVer3D={ver3D} />
         <Grados />
         <Credito />

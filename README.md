@@ -21,7 +21,7 @@ Configuración: copia `.env.example` como `.env`. Lo más importante es `WHATSAP
 | Servidor (Express, Helmet, límites por IP) | `server.js` |
 | Catálogo | `data/productos.json` (se recarga solo al guardar) |
 | Tienda (React + Vite) | `tienda/` → se compila a `dist/` con `npm run build` |
-| Animaciones de [React Bits](https://reactbits.dev) | `tienda/src/bits/` (SplitText, SpotlightCard, CountUp, Stepper, Magnet) |
+| Animaciones de [React Bits](https://reactbits.dev) | `tienda/src/bits/` (SplitText, BlurText, SpotlightCard, CountUp, Stepper, ScrollVelocity, AnimatedContent, Magnet) |
 | Panel, páginas legales y estilos del panel | `public/admin.html`, `public/css/` |
 | Ilustraciones de cada equipo | `public/js/dibujos.js` |
 | Visor 3D (dibujado o escaneo real) | `public/js/visor3d.js` (solo se descarga al abrirlo) |

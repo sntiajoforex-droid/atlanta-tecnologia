@@ -16,7 +16,7 @@ export default function Dialogo({ abierto, alCerrar, className = "", etiqueta, c
   }, [alCerrar]);
   return (
     <dialog ref={ref} className={`dialogo ${className}`} aria-label={etiqueta} onClick={e => { if (e.target === ref.current) ref.current.close(); }}>
-      {abierto && children}
+      {children}
     </dialog>
   );
 }

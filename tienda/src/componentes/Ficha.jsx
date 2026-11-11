@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Dialogo, { Cerrar } from "./Dialogo.jsx";
 import Imagen from "./Imagen.jsx";
 import { agregarAlCarrito } from "./Catalogo.jsx";
@@ -50,10 +50,14 @@ function Contenido({ p, alVer3D }) {
 }
 
 export default function Ficha({ producto, alCerrar, alVer3D }) {
+  /* Se conserva el último equipo mientras la ficha se desvanece al cerrar */
+  const ultimo = useRef(producto);
+  if (producto) ultimo.current = producto;
+  const p = ultimo.current;
   return (
     <Dialogo abierto={!!producto} alCerrar={alCerrar} className="dialogo--ficha" etiqueta={producto ? producto.nombre : "Equipo"}>
       <Cerrar />
-      {producto && <Contenido key={producto.id} p={producto} alVer3D={alVer3D} />}
+      {p && <Contenido key={p.id} p={p} alVer3D={alVer3D} />}
     </Dialogo>
   );
 }

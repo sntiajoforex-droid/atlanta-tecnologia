@@ -1,6 +1,6 @@
 /* Portada: el titular y, a la derecha, un seminuevo real girando en 3D con sus detalles marcados.
    El 3D se monta cuando el navegador queda libre (no compite con la primera pintura) y nunca si se pidió reducir movimiento. */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import SplitText from "../bits/SplitText/SplitText.jsx";
 import Escena3D from "./Escena3D.jsx";
 import Imagen from "./Imagen.jsx";
@@ -15,6 +15,15 @@ export const elegirEstrella = productos => {
 export default function Portada({ estrella, alVerSeminuevos, alVerNuevos, alInspeccionar }) {
   const [montar3D, setMontar3D] = useState(false);
   const [listo, setListo] = useState(false);
+  /* El escenario se inclina apenas hacia el mouse, como una vitrina que se mira de lado */
+  const escenario = useRef(null);
+  const inclinar = e => {
+    if (e.pointerType !== "mouse" || reducirMovimiento()) return;
+    const r = escenario.current.getBoundingClientRect();
+    escenario.current.style.setProperty("--rx", `${((e.clientY - r.top) / r.height - .5) * -5}deg`);
+    escenario.current.style.setProperty("--ry", `${((e.clientX - r.left) / r.width - .5) * 6}deg`);
+  };
+  const soltar = () => { escenario.current?.style.setProperty("--rx", "0deg"); escenario.current?.style.setProperty("--ry", "0deg"); };
   /* En pantallas angostas el escenario es cuadrado: la cámara se aleja un poco para que quepa el equipo entero */
   const [encuadre] = useState(() => (typeof matchMedia !== "undefined" && matchMedia("(max-width: 960px)").matches ? 2.3 : 1.75));
   useEffect(() => {
@@ -39,7 +48,7 @@ export default function Portada({ estrella, alVerSeminuevos, alVerNuevos, alInsp
 
       {estrella && (
         <figure className="portada__escenario">
-          <div className={`escenario${listo ? " escenario--listo" : ""}`}>
+          <div ref={escenario} onPointerMove={inclinar} onPointerLeave={soltar} className={`escenario${listo ? " escenario--listo" : ""}`}>
             <Imagen producto={estrella} grande className="escenario__respaldo" />
             {montar3D && <Escena3D producto={estrella} interactivo={false} zoom={false} encuadre={encuadre} className="escenario__3d" alListo={() => setListo(true)} />}
           </div>

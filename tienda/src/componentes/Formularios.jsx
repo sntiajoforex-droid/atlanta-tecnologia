@@ -2,6 +2,9 @@
 import { useState } from "react";
 import CountUp from "../bits/CountUp/CountUp.jsx";
 import Stepper, { Step } from "../bits/Stepper.jsx";
+import BlurText from "../bits/BlurText/BlurText.jsx";
+import AnimatedContent from "../bits/AnimatedContent/AnimatedContent.jsx";
+import Selector from "./Selector.jsx";
 import { enlaceWhatsapp, pesos } from "../util.js";
 
 const telefonoValido = t => /^\+?\d{7,15}$/.test(String(t).replace(/[\s()-]/g, ""));
@@ -16,9 +19,7 @@ function Campo({ etiqueta, error, ...props }) {
   return (
     <label className="campo">
       <span>{etiqueta}</span>
-      {props.as === "select"
-        ? <select {...{ ...props, as: undefined }} />
-        : <input {...props} aria-invalid={error ? "true" : undefined} />}
+      <input {...props} aria-invalid={error ? "true" : undefined} />
     </label>
   );
 }
@@ -51,10 +52,11 @@ export function Credito() {
   return (
     <section className="seccion credito marco" id="credito" aria-labelledby="titulo-credito">
       <div className="credito__texto">
-        <h2 id="titulo-credito">Estrénalo hoy y págalo a cuotas.</h2>
+        <BlurText tag="h2" text="Estrénalo hoy y págalo a cuotas." className="titulo-animado" animateBy="words" delay={80} />
+        <span id="titulo-credito" hidden>Estrénalo hoy y págalo a cuotas.</span>
         <p>Mueve los valores para ver una cuota de referencia. Después déjanos tu número y un asesor te confirma el plan.</p>
       </div>
-      <div className="simulador">
+      <AnimatedContent className="simulador" distance={40} duration={0.9} blur={6}>
         <label className="deslizador">
           <span>Valor del equipo <output>{pesos(valor)}</output></span>
           <input type="range" min="500000" max="8000000" step="50000" value={valor} onChange={e => setValor(+e.target.value)} />
@@ -74,7 +76,8 @@ export function Credito() {
           <CountUp to={cuota} from={0} duration={0.9} separator="." prefix="$ " mode="roll" trigger="view" className="simulador__cuota" />
           <small>Sin intereses, solo como guía. La tasa y la aprobación las define la entidad de crédito.</small>
         </div>
-      </div>
+      </AnimatedContent>
+      <AnimatedContent className="credito__formulario" distance={40} duration={0.9} delay={0.12} blur={6}>
       <form className="formulario" onSubmit={enviar} noValidate>
         <h3>Pide tu crédito</h3>
         <Campo etiqueta="Nombre completo" autoComplete="name" maxLength={80} value={f.nombre} onChange={e => setF({ ...f, nombre: e.target.value })} />
@@ -84,6 +87,7 @@ export function Credito() {
         <button className="boton boton--lleno" disabled={estado.texto === "Enviando…"}>Quiero que me contacten</button>
         <p className={`formulario__estado ${estado.tipo}`} role="status">{estado.texto}</p>
       </form>
+      </AnimatedContent>
     </section>
   );
 }
@@ -108,7 +112,8 @@ export function VendeTuEquipo() {
   return (
     <section className="seccion vende marco" id="vende" aria-labelledby="titulo-vende">
       <div className="vende__texto">
-        <h2 id="titulo-vende">Tu equipo actual es parte del pago.</h2>
+        <BlurText tag="h2" text="Tu equipo actual es parte del pago." className="titulo-animado" animateBy="words" delay={80} />
+        <span id="titulo-vende" hidden>Tu equipo actual es parte del pago.</span>
         <p>Cuéntanos qué tienes. Te enviamos una oferta por WhatsApp el mismo día y, si te sirve, la descontamos del equipo que te lleves después de revisarlo en tienda.</p>
       </div>
       <Stepper className="vende__pasos" theme="light" accentColor="#6e523a" width={520} radius={22} transition="slide"
@@ -128,9 +133,8 @@ export function VendeTuEquipo() {
         <Step title="Estado">
           <div className="par">
             <Campo etiqueta="Salud de batería (%)" type="number" min="1" max="100" inputMode="numeric" placeholder="87" value={d.bateria} onChange={e => setD({ ...d, bateria: e.target.value })} />
-            <Campo as="select" etiqueta="Cómo está" value={d.estado} onChange={e => setD({ ...d, estado: e.target.value })}>
-              <option>Como nuevo</option><option>Rayones leves</option><option>Golpes o pantalla rota</option>
-            </Campo>
+            <Selector etiqueta="Cómo está" className="campo" valor={d.estado} alCambiar={v => setD({ ...d, estado: v })}
+              opciones={["Como nuevo", "Rayones leves", "Golpes o pantalla rota"].map(x => [x, x])} />
           </div>
           <p className="ayuda-campo">La batería la ves en Configuración, Batería, Estado de la batería.</p>
         </Step>
