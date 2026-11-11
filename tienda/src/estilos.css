@@ -24,6 +24,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 84px; interpolate-size: allow-keywords; }
 html.sin-scroll, html.menu-abierto { overflow: hidden; }
 /* Grano fino, como el aluminio anodizado: casi no se ve, pero quita lo plano de la pantalla */
@@ -76,9 +77,9 @@ p { margin: 0; text-wrap: pretty; }
 .boton-icono svg { width: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------- Encabezado ---------- */
-.encabezado { position: sticky; top: 0; z-index: 40; transition: box-shadow .3s; }
+.encabezado { position: sticky; top: 0; z-index: 40; padding-top: env(safe-area-inset-top); background-color: color-mix(in srgb, var(--fondo) 86%, transparent); transition: box-shadow .3s; }
 /* El vidrio va en una capa aparte: un backdrop-filter en el propio encabezado atraparía al menú fijo del celular */
-.encabezado::before { content: ""; position: absolute; inset: 0; z-index: -1; background: color-mix(in srgb, var(--fondo) 86%, transparent); backdrop-filter: saturate(1.4) blur(14px); }
+.encabezado::before { content: ""; position: absolute; inset: 0; z-index: -1; -webkit-backdrop-filter: saturate(1.4) blur(14px); backdrop-filter: saturate(1.4) blur(14px); }
 .encabezado--bajo { box-shadow: 0 1px 0 var(--linea); }
 .encabezado__fila { height: 68px; display: flex; align-items: center; gap: 32px; }
 .encabezado__logo { text-decoration: none; margin-right: auto; }
@@ -218,12 +219,13 @@ html { scrollbar-color: rgba(26, 27, 29, .3) transparent; }
 .nota-3d strong { color: var(--tinta); }
 .vacio { padding: 48px 0; color: var(--tinta-2); }
 
-.rejilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 20px; }
-.spotlight-card.tarjeta { padding: 0; height: 100%; border-radius: 22px; outline: 1px solid rgba(255, 255, 255, .55); outline-offset: -1px; background-color: var(--superficie); box-shadow: 0 1px 0 rgba(255, 255, 255, .7) inset, 0 24px 40px -30px rgba(26, 27, 29, .35); display: flex; flex-direction: column; transition: transform .45s var(--suave); }
+.rejilla { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(268px, 100%), 1fr)); gap: 20px; }
+.rejilla > li { display: grid; min-width: 0; }
+.spotlight-card.tarjeta { padding: 0; min-width: 0; border-radius: 22px; outline: 1px solid rgba(255, 255, 255, .55); outline-offset: -1px; background-color: var(--superficie); box-shadow: 0 1px 0 rgba(255, 255, 255, .7) inset, 0 24px 40px -30px rgba(26, 27, 29, .35); display: flex; flex-direction: column; transition: transform .45s var(--suave); }
 .spotlight-card.tarjeta:hover { transform: translateY(-3px); }
 .tarjeta--agotada .tarjeta__visual { filter: grayscale(.9); opacity: .7; }
 .tarjeta__abrir { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
-.tarjeta__visual { position: relative; aspect-ratio: 1 / .9; margin: 8px 8px 0; border-radius: 16px; background: var(--escenario); overflow: hidden; }
+.tarjeta__visual { position: relative; min-width: 0; aspect-ratio: 1 / .9; margin: 8px 8px 0; border-radius: 16px; background: var(--escenario); overflow: hidden; }
 .imagen--foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .imagen--dibujo { position: absolute; inset: 9% 14%; display: grid; place-items: center; }
 .imagen--dibujo svg { width: 100%; height: 100%; transition: transform .7s var(--suave); }
@@ -440,7 +442,7 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
 /* ---------- Pantallas medianas y celulares ---------- */
 @media (max-width: 960px) {
   .boton-menu { display: grid; }
-  .navegacion { position: fixed; inset: 68px 0 0; z-index: 39; flex-direction: column; gap: 0; padding: 16px var(--margen); background: var(--fondo); visibility: hidden; opacity: 0; transform: translateY(-12px); transition: opacity .3s, transform .4s var(--suave), visibility 0s .4s; }
+  .navegacion { position: fixed; inset: calc(68px + env(safe-area-inset-top)) 0 0; z-index: 39; flex-direction: column; gap: 0; padding: 16px var(--margen); background: var(--fondo); visibility: hidden; opacity: 0; transform: translateY(-12px); transition: opacity .3s, transform .4s var(--suave), visibility 0s .4s; }
   .navegacion--abierta { visibility: visible; opacity: 1; transform: none; transition: opacity .3s, transform .4s var(--suave); }
   .navegacion a { font-size: 2.6rem; font-stretch: 75%; font-weight: 600; color: var(--tinta); padding: 12px 0; border-bottom: 1px solid var(--linea); }
   .navegacion a::after { display: none; }
@@ -498,9 +500,9 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
   .dialogo--lateral { border-radius: 0; }
   .visor__barra { padding: 10px 16px; }
   .visor__datos { grid-template-columns: repeat(2, auto); }
-  .whatsapp-flotante { right: 14px; bottom: 14px; }
+  .whatsapp-flotante { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); }
   /* Dos equipos por fila, como en cualquier vitrina de celular */
-  .rejilla { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rejilla { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .spotlight-card.tarjeta { border-radius: 18px; }
   .tarjeta__visual { margin: 6px 6px 0; border-radius: 13px; aspect-ratio: 1 / 1.08; }
   .tarjeta__visual .sello { top: 8px; left: 8px; font-size: .7rem; padding: 3px 8px; }
