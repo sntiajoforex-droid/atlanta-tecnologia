@@ -103,13 +103,13 @@ p { margin: 0; text-wrap: pretty; }
 .boton-menu[aria-expanded="true"] span:last-child { transform: rotate(-45deg); }
 
 /* ---------- Portada ---------- */
-.portada { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr); gap: clamp(24px, 4vw, 64px); align-items: center; padding-block: clamp(24px, 4vw, 56px) clamp(56px, 7vw, 96px); min-height: calc(100svh - 68px); }
+.portada { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 64px); align-items: center; padding-block: clamp(24px, 4vw, 56px) clamp(56px, 7vw, 96px); min-height: calc(100svh - 68px); }
 .portada__titulo { display: block !important; width: 100%; font-size: clamp(3.3rem, 8.6vw, 7.8rem); font-stretch: 75%; font-weight: 620; line-height: .9; letter-spacing: -.035em; }
 .portada__bajada { margin-top: 28px; max-width: 44ch; font-size: 1.15rem; color: var(--tinta-2); }
 .portada__botones { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
 .portada__escenario { margin: 0; }
 .escenario { transform: perspective(1400px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .9s var(--suave); }
-.escenario { position: relative; aspect-ratio: 4 / 5; max-height: min(74svh, 720px); width: 100%; border-radius: 32px; background: var(--escenario); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), 0 40px 80px -48px rgba(26, 27, 29, .45); }
+.escenario { position: relative; aspect-ratio: 4 / 5; max-height: min(80svh, 800px); width: 100%; border-radius: 32px; background: var(--escenario); overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .6), 0 40px 80px -48px rgba(26, 27, 29, .45); }
 /* Luz de estudio: un reflejo que recorre el escenario muy despacio y un piso que refleja */
 .escenario::before { content: ""; position: absolute; inset: -20%; z-index: 0; pointer-events: none; background: conic-gradient(from 200deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, .55) 40deg, transparent 90deg, transparent 360deg); filter: blur(40px); animation: luz-estudio 18s linear infinite; }
 .escenario::after { content: ""; position: absolute; left: 10%; right: 10%; bottom: 4%; height: 18%; z-index: 0; pointer-events: none; background: radial-gradient(50% 50% at 50% 50%, rgba(255, 255, 255, .7), transparent 70%); }
@@ -445,7 +445,7 @@ input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.15); }
   .navegacion a { font-size: 2.6rem; font-stretch: 75%; font-weight: 600; color: var(--tinta); padding: 12px 0; border-bottom: 1px solid var(--linea); }
   .navegacion a::after { display: none; }
   .portada { grid-template-columns: 1fr; min-height: 0; }
-  .escenario { aspect-ratio: 1 / 1; max-height: 64svh; }
+  .escenario { aspect-ratio: 1 / 1; max-height: 72svh; }
   .garantias__lista { grid-template-columns: 1fr 1fr; }
   .grados, .preguntas, .vende { grid-template-columns: 1fr; }
   .vende__pasos { justify-self: stretch; }

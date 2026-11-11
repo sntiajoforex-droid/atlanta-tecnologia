@@ -24,8 +24,6 @@ export default function Portada({ estrella, alVerSeminuevos, alVerNuevos, alInsp
     escenario.current.style.setProperty("--ry", `${((e.clientX - r.left) / r.width - .5) * 6}deg`);
   };
   const soltar = () => { escenario.current?.style.setProperty("--rx", "0deg"); escenario.current?.style.setProperty("--ry", "0deg"); };
-  /* En pantallas angostas el escenario es cuadrado: la cámara se aleja un poco para que quepa el equipo entero */
-  const [encuadre] = useState(() => (typeof matchMedia !== "undefined" && matchMedia("(max-width: 960px)").matches ? 2.3 : 1.75));
   useEffect(() => {
     if (!estrella || reducirMovimiento()) return;
     const id = (window.requestIdleCallback || (f => setTimeout(f, 900)))(() => setMontar3D(true), { timeout: 2500 });
@@ -50,7 +48,7 @@ export default function Portada({ estrella, alVerSeminuevos, alVerNuevos, alInsp
         <figure className="portada__escenario">
           <div ref={escenario} onPointerMove={inclinar} onPointerLeave={soltar} className={`escenario${listo ? " escenario--listo" : ""}`}>
             <Imagen producto={estrella} grande className="escenario__respaldo" />
-            {montar3D && <Escena3D producto={estrella} interactivo={false} zoom={false} encuadre={encuadre} className="escenario__3d" alListo={() => setListo(true)} />}
+            {montar3D && <Escena3D producto={estrella} interactivo={false} zoom={false} holgura={1.22} className="escenario__3d" alListo={() => setListo(true)} />}
           </div>
           <figcaption className="escenario__pie">
             <span>

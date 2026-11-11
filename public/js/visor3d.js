@@ -279,7 +279,7 @@ async function cargarEscaneo(producto, alProgreso) {
   return { grupo, W, H, D, R: W * .17, escaneo: true, interior, analisis: a, escala };
 }
 
-export function crearVisor(contenedor, producto, { alMarcar = () => {}, alInteractuar = () => {}, alColocar = null, alProgreso = () => {}, zoom = true, interactivo = true, encuadre = 2.3 } = {}) {
+export function crearVisor(contenedor, producto, { alMarcar = () => {}, alInteractuar = () => {}, alColocar = null, alProgreso = () => {}, zoom = true, interactivo = true, encuadre = 2.3, holgura = 0 } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
@@ -305,9 +305,9 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
     tel = t; escena.add(tel.grupo);
     const sombra = new THREE.Mesh(new THREE.PlaneGeometry(tel.W * 2.2, tel.D * 9 + 2), new THREE.MeshBasicMaterial({ map: texturaSombra(), transparent: true, depthWrite: false }));
     sombra.rotation.x = -Math.PI / 2; sombra.position.y = -tel.H / 2 - .9; escena.add(sombra);
-    distancia = tel.H * encuadre;
-    camara.position.set(-distancia * .45, distancia * .12, -distancia * .9);
-    Object.assign(controles, { minDistance: tel.H * .9, maxDistance: tel.H * 3.4 });
+    distancia = tel.H * encuadre; ajustar();
+    camara.position.set(-.45, .12, -.9).setLength(distancia);
+    Object.assign(controles, { minDistance: tel.H * .9, maxDistance: Math.max(tel.H * 3.4, distancia * 1.2) });
     ponerMarcas(listaMarcas);
   }
 
@@ -379,16 +379,29 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
     controles.autoRotate = false;
   };
   const DIRS = { trasera: new THREE.Vector3(-.25, .1, -1), frontal: new THREE.Vector3(.2, .08, 1), "marco-der": new THREE.Vector3(1, .1, .15), "marco-izq": new THREE.Vector3(-1, .1, .15) };
+  /* Vuelve al encuadre completo (centrado, a la altura de siempre) y retoma el giro */
+  let tVolver = 0;
+  function volver() {
+    clearTimeout(tVolver); mostrarGlobo(-1);
+    const d = camara.position.clone().sub(controles.target); d.y = Math.hypot(d.x, d.z) * .13;
+    viajar(d, distancia); controles.autoRotate = true;
+  }
   function vista(nombre) {
+    clearTimeout(tVolver);
+    if (nombre === "giro") return volver();
     mostrarGlobo(-1);
-    if (nombre === "giro") { viajar(camara.position.clone().sub(controles.target), distancia); controles.autoRotate = true; return; }
     viajar(DIRS[nombre] || DIRS.trasera, distancia);
   }
   function enfocarMarca(i) {
     const m = marcas[i]; if (!m) return;
+    /* Tocar otra vez el detalle abierto lo cierra y regresa a la vista completa */
+    if (i === activa) return volver();
     alInteractuar();
+    clearTimeout(tVolver);
+    /* De adorno (portada) no hay botones para regresar: vuelve solo tras unos segundos */
+    if (!interactivo) tVolver = setTimeout(volver, 5500);
     const dir = m.n.clone().multiplyScalar(1).add(new THREE.Vector3(0, .15, 0));
-    if (Math.abs(m.n.z) < .5) dir.add(new THREE.Vector3(0, 0, .35)); /* lados: un poco de frente para ver el contexto */
+    if (Math.abs(m.n.z) < .5) dir.add(new THREE.Vector3(0, 0, .55)); /* lados: un poco de frente para ver el contexto */
     viajar(dir, distancia * .72, m.p.clone().multiplyScalar(.55));
     mostrarGlobo(i);
   }
@@ -405,7 +418,20 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
     if (!w || !h) return;
     renderer.setSize(w, h, false); camara.aspect = w / h;
     camara.fov = w < h ? 42 : 32; camara.updateProjectionMatrix();
+    /* Con «holgura», la distancia sale del tamaño del marco: el equipo entero cabe con aire alrededor, sea cual sea la proporción */
+    if (holgura && tel) {
+      ajustar(); controles.maxDistance = Math.max(tel.H * 3.4, distancia * 1.2);
+      if (!viaje && activa < 0) camara.position.sub(controles.target).setLength(distancia).add(controles.target);
+    }
   };
+  function ajustar() {
+    if (!holgura || !tel) return;
+    const t = Math.tan(THREE.MathUtils.degToRad(camara.fov / 2));
+    const alto = tel.H / 2 / t, ancho = Math.hypot(tel.W, tel.D) / 2 / (t * camara.aspect);
+    distancia = Math.max(alto, ancho) * holgura + tel.D;
+  }
+  /* Portada: un clic en el fondo del escenario también cierra el detalle abierto */
+  if (!interactivo) contenedor.addEventListener("click", e => { if (activa >= 0 && !e.target.closest(".marca-3d")) volver(); });
   const ro = new ResizeObserver(tam); ro.observe(contenedor); tam();
 
   const v = new THREE.Vector3(), haciaCam = new THREE.Vector3();
@@ -438,7 +464,7 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
 
   function destruir() {
     destruido = true;
-    cancelAnimationFrame(raf); ro.disconnect(); controles.dispose();
+    clearTimeout(tVolver); cancelAnimationFrame(raf); ro.disconnect(); controles.dispose();
     escena.traverse(o => { o.geometry?.dispose(); const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; mats.forEach(mt => { for (const k of ["map", "emissiveMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap"]) mt[k]?.dispose(); mt.dispose(); }); });
     entorno.dispose(); pmrem.dispose(); renderer.dispose(); renderer.forceContextLoss?.();
     renderer.domElement.remove(); marcas.forEach(m => m.punto.remove()); globo?.remove();
