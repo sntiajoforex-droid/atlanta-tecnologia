@@ -206,8 +206,8 @@ p { margin: 0; text-wrap: pretty; }
 .banda { padding-block: clamp(36px, 6vw, 72px) 0; overflow: hidden; }
 .banda .parallax { padding-block: 4px; }
 .banda .scroller { font-family: inherit; font-stretch: 75%; font-weight: 620; font-size: clamp(2.2rem, 6vw, 4.8rem); line-height: 1.05; letter-spacing: -.02em; color: var(--tinta); filter: none; }
-.banda .parallax + .parallax .scroller { color: rgba(26, 27, 29, .38); }  /* fila en contorno: el trazo usa este color */
-.banda .scroller span { padding-right: .35em; }
+.banda .parallax + .parallax .scroller { color: rgba(26, 27, 29, .26); font-weight: 560; }
+.banda .scroller span { padding-right: 0; }
 
 /* Números sin flechas del sistema */
 input[type="number"] { -moz-appearance: textfield; appearance: textfield; }

@@ -89,9 +89,12 @@ export const BotonWhatsapp = () => (
 );
 
 /* Banda de modelos: se desliza sola y acelera con el scroll */
+/* Cada vuelta termina en «✦» con espacios duros, para que el salto entre copias mida lo mismo que entre modelos.
+   La segunda fila va sólida y más clara: el contorno de una fuente variable dibuja los trazos internos de cada letra. */
+const MODELOS = ["iPhone 17 Pro Max", "iPhone Air", "iPhone 16 Pro", "MacBook Air", "iPad Pro", "iPhone 15"];
+const SERVICIOS = ["Seminuevos revisados en 3D", "Garantía escrita", "Crédito", "Recibimos tu usado"];
 export const BandaModelos = () => (
   <div className="banda" aria-hidden="true">
-    <ScrollVelocity texts={["iPhone 17 Pro Max ✦ iPhone Air ✦ iPhone 16 Pro ✦ MacBook Air ✦ iPad Pro ✦ iPhone 15 ✦", "Seminuevos revisados en 3D ✦ Garantía escrita ✦ Crédito ✦ Recibimos tu usado ✦"]}
-      velocity={38} numCopies={4} className="banda__texto" outlineAlternate fadeEdges />
+    <ScrollVelocity texts={[MODELOS, SERVICIOS].map(l => l.join(" ✦ ") + " ✦ ")} velocity={38} numCopies={4} className="banda__texto" fadeEdges />
   </div>
 );
