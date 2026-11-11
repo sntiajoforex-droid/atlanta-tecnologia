@@ -279,7 +279,7 @@ async function cargarEscaneo(producto, alProgreso) {
   return { grupo, W, H, D, R: W * .17, escaneo: true, interior, analisis: a, escala };
 }
 
-export function crearVisor(contenedor, producto, { alMarcar = () => {}, alInteractuar = () => {}, alColocar = null, alProgreso = () => {} } = {}) {
+export function crearVisor(contenedor, producto, { alMarcar = () => {}, alInteractuar = () => {}, alColocar = null, alProgreso = () => {}, zoom = true, interactivo = true, encuadre = 2.3 } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
@@ -294,7 +294,9 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
 
   const camara = new THREE.PerspectiveCamera(32, 1, .1, 400);
   const controles = new OrbitControls(camara, renderer.domElement);
-  Object.assign(controles, { enableDamping: true, dampingFactor: .08, enablePan: false, autoRotate: true, autoRotateSpeed: 1.6, rotateSpeed: .8 });
+  Object.assign(controles, { enableDamping: true, dampingFactor: .08, enablePan: false, enableZoom: zoom, enabled: interactivo, autoRotate: true, autoRotateSpeed: 1.6, rotateSpeed: .8 });
+  /* De adorno (portada): no captura el arrastre ni la rueda, para no frenar el scroll de la página */
+  if (!interactivo) { renderer.domElement.style.touchAction = "auto"; renderer.domElement.style.pointerEvents = "none"; }
 
   let tel = null, distancia = 30, destruido = false;
   /* Coloca el equipo (dibujado o escaneado) y ajusta cámara y sombra a su tamaño */
@@ -303,7 +305,7 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
     tel = t; escena.add(tel.grupo);
     const sombra = new THREE.Mesh(new THREE.PlaneGeometry(tel.W * 2.2, tel.D * 9 + 2), new THREE.MeshBasicMaterial({ map: texturaSombra(), transparent: true, depthWrite: false }));
     sombra.rotation.x = -Math.PI / 2; sombra.position.y = -tel.H / 2 - .9; escena.add(sombra);
-    distancia = tel.H * 2.3;
+    distancia = tel.H * encuadre;
     camara.position.set(-distancia * .45, distancia * .12, -distancia * .9);
     Object.assign(controles, { minDistance: tel.H * .9, maxDistance: tel.H * 3.4 });
     ponerMarcas(listaMarcas);

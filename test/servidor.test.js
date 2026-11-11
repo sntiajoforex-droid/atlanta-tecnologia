@@ -29,8 +29,9 @@ test("la portada carga con cabeceras de seguridad", async () => {
 });
 
 test("la página no tiene scripts ni estilos en línea (los bloquearía la CSP)", () => {
-  for (const f of ["index.html", "404.html", "privacidad.html"]) {
-    const html = fs.readFileSync(path.join(__dirname, "..", "public", f), "utf8");
+  /* La tienda compilada (dist, la genera «npm run build» antes de las pruebas) y las páginas estáticas */
+  for (const f of ["dist/index.html", "public/404.html", "public/privacidad.html", "public/admin.html"]) {
+    const html = fs.readFileSync(path.join(__dirname, "..", f), "utf8");
     assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/i, f + ": script en línea");
     assert.doesNotMatch(html, /\sstyle=/i, f + ": atributo style");
     assert.doesNotMatch(html, /\son[a-z]+=/i, f + ": evento en línea");

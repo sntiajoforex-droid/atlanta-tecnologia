@@ -4,9 +4,13 @@
     {
       "name": "atlanta",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["server.js"],
+      "runtimeArgs": [
+        "server.js"
+      ],
       "port": 3100,
-      "env": { "PORT": "3100" }
+      "env": {
+        "PORT": "3100"
+      }
     }
   ]
 }

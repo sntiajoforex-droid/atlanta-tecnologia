@@ -9,3 +9,5 @@ data/respaldos/
 data/*.tmp
 data/fotos/
 data/modelos3d/
+CREDENCIALES-PANEL.txt
+dist/

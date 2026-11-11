@@ -70,6 +70,14 @@ app.get("/sitemap.xml", (req, res) => {
 app.use("/fotos", express.static(cat.FOTOS, { index: false, dotfiles: "deny", immutable: true, maxAge: "365d", fallthrough: true }));
 app.use("/modelos3d", express.static(cat.MODELOS, { index: false, dotfiles: "deny", immutable: true, maxAge: "365d", fallthrough: true,
   setHeaders: res => res.setHeader("Content-Type", "model/gltf-binary") }));
+/* Tienda (React, compilada con «npm run build» en /dist): los archivos de /assets llevan huella en el nombre, así que se guardan un año */
+const DIST = path.join(__dirname, "dist");
+app.use("/assets", express.static(path.join(DIST, "assets"), { index: false, immutable: true, maxAge: "365d", fallthrough: false }));
+app.get(["/", "/index.html"], (req, res) => {
+  const f = path.join(DIST, "index.html");
+  if (!fs.existsSync(f)) return res.status(503).type("text/plain").send("La tienda no está compilada: ejecuta npm run build");
+  res.setHeader("Cache-Control", "no-cache"); res.sendFile(f);
+});
 app.get(["/admin", "/admin/"], (req, res) => { res.setHeader("X-Robots-Tag", "noindex, nofollow"); res.setHeader("Cache-Control", "no-store"); res.sendFile(path.join(__dirname, "public", "admin.html")); });
 app.use(express.static(path.join(__dirname, "public"), {
   setHeaders: (res, p) => {

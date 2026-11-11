@@ -6,8 +6,10 @@ Tienda de equipos Apple nuevos y seminuevos. Cada seminuevo se puede revisar **e
 
 ```bash
 npm install      # también copia three.js a public/vendor
+npm run build    # compila la tienda (React) a dist/
 npm start        # http://localhost:3000
-npm test         # pruebas de servidor y seguridad
+npm test         # compila y corre las pruebas de servidor y seguridad
+npm run dev:tienda   # tienda con recarga en vivo (con npm start corriendo aparte)
 ```
 
 Configuración: copia `.env.example` como `.env`. Lo más importante es `WHATSAPP` (número con indicativo, ej. `573001234567`): sin él, los pedidos abren el enlace corto del perfil y el mensaje no llega escrito.
@@ -18,8 +20,9 @@ Configuración: copia `.env.example` como `.env`. Lo más importante es `WHATSAP
 |---|---|
 | Servidor (Express, Helmet, límites por IP) | `server.js` |
 | Catálogo | `data/productos.json` (se recarga solo al guardar) |
-| Página | `public/index.html`, `public/css/estilos.css` |
-| Catálogo, ficha, carrito, formularios | `public/js/app.js` |
+| Tienda (React + Vite) | `tienda/` → se compila a `dist/` con `npm run build` |
+| Animaciones de [React Bits](https://reactbits.dev) | `tienda/src/bits/` (SplitText, SpotlightCard, CountUp, Stepper, Magnet) |
+| Panel, páginas legales y estilos del panel | `public/admin.html`, `public/css/` |
 | Ilustraciones de cada equipo | `public/js/dibujos.js` |
 | Visor 3D (dibujado o escaneo real) | `public/js/visor3d.js` (solo se descarga al abrirlo) |
 | Solicitudes de crédito y usados | se guardan en `data/solicitudes.jsonl` |
