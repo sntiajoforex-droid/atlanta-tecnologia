@@ -47,7 +47,7 @@ const limite = o => rateLimit({ standardHeaders: true, legacyHeaders: false, key
 app.use(helmet({
   contentSecurityPolicy: { useDefaults: false, directives: {
     defaultSrc: ["'self'"], scriptSrc: ["'self'"], styleSrc: ["'self'", "https://fonts.googleapis.com"],
-    fontSrc: ["https://fonts.gstatic.com"], imgSrc: ["'self'", "data:", "blob:"], connectSrc: ["'self'"],
+    fontSrc: ["https://fonts.gstatic.com"], imgSrc: ["'self'", "data:", "blob:"], connectSrc: ["'self'", "blob:"],
     objectSrc: ["'none'"], baseUri: ["'self'"], formAction: ["'self'"], frameAncestors: ["'none'"], upgradeInsecureRequests: [] } },
   hsts: { maxAge: 31536000, includeSubDomains: true },
   crossOriginEmbedderPolicy: false
@@ -68,6 +68,8 @@ app.get("/sitemap.xml", (req, res) => {
 
 /* Fotos de productos: cada archivo tiene nombre único y nunca cambia, así que se guardan en caché un año */
 app.use("/fotos", express.static(cat.FOTOS, { index: false, dotfiles: "deny", immutable: true, maxAge: "365d", fallthrough: true }));
+app.use("/modelos3d", express.static(cat.MODELOS, { index: false, dotfiles: "deny", immutable: true, maxAge: "365d", fallthrough: true,
+  setHeaders: res => res.setHeader("Content-Type", "model/gltf-binary") }));
 app.get(["/admin", "/admin/"], (req, res) => { res.setHeader("X-Robots-Tag", "noindex, nofollow"); res.setHeader("Cache-Control", "no-store"); res.sendFile(path.join(__dirname, "public", "admin.html")); });
 app.use(express.static(path.join(__dirname, "public"), {
   setHeaders: (res, p) => {

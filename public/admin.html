@@ -161,6 +161,25 @@
           </fieldset>
 
           <fieldset>
+            <legend>Escaneo 3D real</legend>
+            <div class="ancho escaneo-editor">
+              <div class="escaneo-actual" id="escaneo-actual" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>
+                <div class="escaneo-actual__texto"><strong id="escaneo-nombre">Escaneo cargado</strong><small id="escaneo-detalle"></small></div>
+                <button type="button" class="boton boton--borde boton--chico" id="escaneo-voltear" title="Si se ve la espalda donde va la pantalla">Pantalla ↔ espalda</button>
+                <button type="button" class="boton boton--borde boton--chico" id="escaneo-invertir" title="Si quedó de cabeza">Arriba ↔ abajo</button>
+                <button type="button" class="boton boton--borde boton--chico peligro" id="escaneo-quitar">Quitar</button>
+              </div>
+              <label class="soltar" id="soltar-escaneo">
+                <input type="file" id="elegir-escaneo" accept=".glb,model/gltf-binary">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg>
+                <span><strong>Elige o arrastra el escaneo (.glb)</strong> · hasta 30 MB. Se muestra en la tienda en lugar del equipo dibujado.</span>
+              </label>
+              <p class="nota-campo">Escanea el equipo con una app gratis como <strong>Scaniverse</strong>, <strong>KIRI Engine</strong> o <strong>Polycam</strong> y exporta en formato <strong>GLB</strong>. Se endereza solo; si queda al revés, usa los botones. Sale mejor con luz pareja, sin reflejos directos y rodeándolo por completo.</p>
+            </div>
+          </fieldset>
+
+          <fieldset>
             <legend>Ficha</legend>
             <label class="ancho">Incluye (separado por comas)<input name="incluye" maxlength="300" placeholder="Cable USB-C, Caja original"></label>
             <div class="ancho specs-editor">

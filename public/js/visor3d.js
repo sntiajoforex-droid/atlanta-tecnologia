@@ -1,5 +1,6 @@
 /* Visor 3D de equipos.
    Arma el teléfono con las medidas reales del catálogo (mm) y ubica cada detalle (rayón, golpe) en la cara donde está.
+   Si el producto trae un escaneo real (GLB), se muestra ese en lugar del dibujado.
    Unidades: 1 = 10 mm. El frente mira a +Z, la espalda a −Z, el lado derecho (visto de frente) a +X. */
 import * as THREE from "../vendor/three.module.js";
 import { OrbitControls } from "../vendor/OrbitControls.js";
@@ -139,18 +140,146 @@ function ubicar(k, { W, H, D, R }) {
   return { p, n };
 }
 
-/* Lo inverso de ubicar(): de un punto del modelo a cara y (u, v). Se usa en el panel para marcar con un clic */
-function caraDe(q, { W, H, D }) {
+/* Lo inverso de ubicar(): de un punto del modelo a cara y (u, v). Se usa en el panel para marcar con un clic.
+   En un escaneo la superficie no es una caja perfecta: la normal del punto tocado decide si es pantalla o espalda */
+function caraDe(q, { W, H, D, escaneo }, normal) {
   const c = v => Math.round(Math.min(1, Math.max(0, v)) * 1000) / 1000;
-  if (Math.abs(q.z) >= D / 2 - .03) return q.z > 0
-    ? { cara: "frontal", u: c(q.x / (W * .9) + .5), v: c(.5 - q.y / (H * .92)) }
-    : { cara: "trasera", u: c(.5 - q.x / (W * .9)), v: c(.5 - q.y / (H * .92)) };
+  const frenteOAtras = escaneo && normal ? Math.abs(normal.z) > .55 : Math.abs(q.z) >= D / 2 - .03;
+  const atras = escaneo && normal ? normal.z < 0 : q.z < 0;
+  if (frenteOAtras) return atras
+    ? { cara: "trasera", u: c(.5 - q.x / (W * .9)), v: c(.5 - q.y / (H * .92)) }
+    : { cara: "frontal", u: c(q.x / (W * .9) + .5), v: c(.5 - q.y / (H * .92)) };
   if (Math.abs(q.x) / (W / 2) >= Math.abs(q.y) / (H / 2))
     return { cara: q.x > 0 ? "marco-der" : "marco-izq", u: c(.5 - q.z / (D * .6)), v: c(.5 - q.y / H) };
   return { cara: q.y > 0 ? "marco-sup" : "marco-inf", u: c(q.x / W + .5), v: c(.5 - q.z / (D * .6)) };
 }
 
-export function crearVisor(contenedor, producto, { alMarcar = () => {}, alInteractuar = () => {}, alColocar = null } = {}) {
+/* ---------- Escaneo real (GLB) ----------
+   Las apps de escaneo dejan el equipo en cualquier posición (acostado, girado sobre la mesa...).
+   Con los ejes principales de sus vértices (PCA) se endereza solo: el eje más largo queda como alto y el más corto como grosor.
+   Lo que el cálculo no puede saber (cuál cara es la pantalla y cuál lado va arriba) se corrige con «voltear» e «invertir». */
+function jacobi(A) {
+  const V = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+  for (let it = 0; it < 60; it++) {
+    let p = 0, q = 1;
+    if (Math.abs(A[0][2]) > Math.abs(A[p][q])) { p = 0; q = 2; }
+    if (Math.abs(A[1][2]) > Math.abs(A[p][q])) { p = 1; q = 2; }
+    if (Math.abs(A[p][q]) < 1e-14 * (Math.abs(A[0][0]) + Math.abs(A[1][1]) + Math.abs(A[2][2]))) break;
+    const th = (A[q][q] - A[p][p]) / (2 * A[p][q]);
+    const t = (th >= 0 ? 1 : -1) / (Math.abs(th) + Math.sqrt(th * th + 1)), cs = 1 / Math.sqrt(t * t + 1), sn = t * cs;
+    for (let k = 0; k < 3; k++) { const a = A[k][p], b = A[k][q]; A[k][p] = cs * a - sn * b; A[k][q] = sn * a + cs * b; }
+    for (let k = 0; k < 3; k++) { const a = A[p][k], b = A[q][k]; A[p][k] = cs * a - sn * b; A[q][k] = sn * a + cs * b; }
+    for (let k = 0; k < 3; k++) { const a = V[k][p], b = V[k][q]; V[k][p] = cs * a - sn * b; V[k][q] = sn * a + cs * b; }
+  }
+  return [0, 1, 2].map(j => ({ valor: A[j][j], eje: new THREE.Vector3(V[0][j], V[1][j], V[2][j]) })).sort((a, b) => b.valor - a.valor);
+}
+function recorrerVertices(raiz, f) {
+  const v = new THREE.Vector3();
+  raiz.traverse(o => {
+    if (!o.isMesh) return;
+    const pos = o.geometry.attributes.position, paso = Math.max(1, Math.floor(pos.count / 150000));
+    for (let i = 0; i < pos.count; i += paso) f(v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld));
+  });
+}
+function analizarEscaneo(raiz) {
+  raiz.updateMatrixWorld(true);
+  /* Puntos de muestra (hasta ~150 mil por malla), relativos al promedio */
+  const lista = [];
+  recorrerVertices(raiz, p => lista.push(p.x, p.y, p.z));
+  const n = lista.length / 3;
+  if (!n) throw new Error("El escaneo no tiene vértices");
+  const media = new THREE.Vector3();
+  for (let i = 0; i < lista.length; i += 3) { media.x += lista[i]; media.y += lista[i + 1]; media.z += lista[i + 2]; }
+  media.divideScalar(n);
+  const P = new Float32Array(lista.length);
+  for (let i = 0; i < lista.length; i += 3) { P[i] = lista[i] - media.x; P[i + 1] = lista[i + 1] - media.y; P[i + 2] = lista[i + 2] - media.z; }
+
+  /* 1) Ejes principales (PCA) */
+  const C = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  for (let i = 0; i < P.length; i += 3) for (let a = 0; a < 3; a++) for (let b = a; b < 3; b++) C[a][b] += P[i + a] * P[i + b];
+  C[1][0] = C[0][1]; C[2][0] = C[0][2]; C[2][1] = C[1][2];
+  const [largo, medio] = jacobi(C);
+  const firmar = v => { const a = v.toArray(), k = a.reduce((m, x, i) => Math.abs(x) > Math.abs(a[m]) ? i : m, 0); return a[k] < 0 ? v.negate() : v; };
+  const ey = firmar(largo.eje.clone().normalize()), ex = firmar(medio.eje.clone().normalize());
+  const ez = new THREE.Vector3().crossVectors(ex, ey).normalize();
+  const giro = new THREE.Matrix4().makeBasis(ex, ey, ez).transpose(); /* del espacio del archivo a ejes del equipo */
+  const e = giro.elements; /* columna mayor */
+  for (let i = 0; i < P.length; i += 3) {
+    const x = P[i], y = P[i + 1], z = P[i + 2];
+    P[i] = e[0] * x + e[4] * y + e[8] * z; P[i + 1] = e[1] * x + e[5] * y + e[9] * z; P[i + 2] = e[2] * x + e[6] * y + e[10] * z;
+  }
+
+  /* 2) Ajuste fino: la cámara que sobresale tuerce un poco el PCA. En cada plano se busca el ángulo (±8°) con la caja más ajustada */
+  const paso = Math.max(1, Math.floor(n / 20000));
+  for (const [a, b] of [[0, 1], [1, 2], [0, 2], [0, 1]]) {
+    let mejor = 0, menor = Infinity;
+    for (let g = -8; g <= 8; g += .2) {
+      const t = g * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
+      let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+      for (let i = 0; i < P.length; i += 3 * paso) {
+        const u = c * P[i + a] - s * P[i + b], v = s * P[i + a] + c * P[i + b];
+        if (u < a0) a0 = u; if (u > a1) a1 = u; if (v < b0) b0 = v; if (v > b1) b1 = v;
+      }
+      const area = (a1 - a0) * (b1 - b0);
+      if (area < menor - 1e-12) { menor = area; mejor = t; }
+    }
+    if (!mejor) continue;
+    const c = Math.cos(mejor), s = Math.sin(mejor);
+    for (let i = 0; i < P.length; i += 3) { const u = P[i + a], v = P[i + b]; P[i + a] = c * u - s * v; P[i + b] = s * u + c * v; }
+    const R = new THREE.Matrix4(), m = R.elements; /* rotación en el plano (a, b) */
+    m[a * 4 + a] = c; m[b * 4 + a] = -s; m[a * 4 + b] = s; m[b * 4 + b] = c;
+    giro.premultiply(R);
+  }
+
+  const min = new THREE.Vector3(Infinity, Infinity, Infinity), max = min.clone().negate(), q = new THREE.Vector3();
+  for (let i = 0; i < P.length; i += 3) { q.fromArray(P, i); min.min(q); max.max(q); }
+
+  /* 3) Adivina cuál cara es la espalda y cuál lado va arriba: el módulo de cámaras sobresale de la espalda, en la parte de arriba.
+     La pantalla y la espalda son los planos con más puntos (percentiles 25 y 75 del grosor); lo que pasa más allá de uno de ellos es la cámara. */
+  const zs = new Float32Array(n);
+  for (let i = 0; i < n; i++) zs[i] = P[i * 3 + 2];
+  const orden = Float32Array.from(zs).sort(), pct = f => orden[Math.floor(f * (n - 1))];
+  const planoMenos = pct(.25), planoMas = pct(.75), sobraMas = max.z - planoMas, sobraMenos = planoMenos - min.z;
+  let girarZ = false, girarY = false;
+  if (Math.abs(sobraMas - sobraMenos) > (planoMas - planoMenos) * .08) {
+    const camaraEnMas = sobraMas > sobraMenos, umbral = camaraEnMas ? planoMas + sobraMas * .4 : planoMenos - sobraMenos * .4;
+    let suma = 0, k = 0;
+    for (let i = 0; i < n; i++) if (camaraEnMas ? zs[i] > umbral : zs[i] < umbral) { suma += P[i * 3 + 1]; k++; }
+    girarZ = camaraEnMas; /* la espalda debe mirar a −Z */
+    girarY = k > 0 && suma / k < (min.y + max.y) / 2; /* la cámara debe quedar arriba */
+  }
+  if (girarZ || girarY) {
+    const sx = girarZ !== girarY ? -1 : 1, sy = girarY ? -1 : 1, sz = girarZ ? -1 : 1;
+    giro.premultiply(new THREE.Matrix4().makeScale(sx, sy, sz));
+    const k = new THREE.Vector3(sx, sy, sz), a = min.clone().multiply(k), b = max.clone().multiply(k);
+    min.copy(a).min(b); max.copy(a).max(b);
+  }
+  return { media, giro, centro: min.clone().add(max).multiplyScalar(.5), medidas: max.clone().sub(min) };
+}
+function orientarEscaneo(interior, a, escala, { voltear, invertir }) {
+  const F = new THREE.Matrix4().makeScale((voltear ? -1 : 1) * (invertir ? -1 : 1), invertir ? -1 : 1, voltear ? -1 : 1);
+  interior.matrix.makeScale(escala, escala, escala).multiply(F)
+    .multiply(new THREE.Matrix4().makeTranslation(-a.centro.x, -a.centro.y, -a.centro.z)).multiply(a.giro)
+    .multiply(new THREE.Matrix4().makeTranslation(-a.media.x, -a.media.y, -a.media.z));
+  interior.updateMatrixWorld(true);
+}
+async function cargarEscaneo(producto, alProgreso) {
+  const { GLTFLoader } = await import("../vendor/GLTFLoader.js");
+  const e = producto.escaneo, url = e.url || "/modelos3d/" + encodeURIComponent(e.archivo);
+  const gltf = await new GLTFLoader().loadAsync(url, ev => ev.total && alProgreso(ev.loaded / ev.total));
+  const raiz = gltf.scene, a = analizarEscaneo(raiz);
+  /* Tamaño: el alto real del modelo si se conoce; si no, las apps exportan en metros (1 m = 100 unidades de 10 mm) */
+  const alto = producto.modelo ? producto.modelo.alto / 10 : a.medidas.y < 1 ? a.medidas.y * 100 : 15;
+  const escala = alto / a.medidas.y;
+  const interior = new THREE.Group(); interior.matrixAutoUpdate = false; interior.add(raiz);
+  raiz.traverse(o => { if (!o.isMesh) return; for (const m of [].concat(o.material)) { m.side = THREE.DoubleSide; if ("envMapIntensity" in m) m.envMapIntensity = .7; } });
+  orientarEscaneo(interior, a, escala, e);
+  const grupo = new THREE.Group(); grupo.add(interior);
+  const W = a.medidas.x * escala, H = a.medidas.y * escala, D = a.medidas.z * escala;
+  return { grupo, W, H, D, R: W * .17, escaneo: true, interior, analisis: a, escala };
+}
+
+export function crearVisor(contenedor, producto, { alMarcar = () => {}, alInteractuar = () => {}, alColocar = null, alProgreso = () => {} } = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
@@ -163,23 +292,45 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
   const luz = new THREE.DirectionalLight(0xffffff, 1.6); luz.position.set(4, 8, 6); escena.add(luz);
   const luz2 = new THREE.DirectionalLight(0xd8c3a0, .8); luz2.position.set(-6, -2, -6); escena.add(luz2);
 
-  const tel = construirTelefono(producto);
-  escena.add(tel.grupo);
-  const sombra = new THREE.Mesh(new THREE.PlaneGeometry(tel.W * 2.2, tel.D * 9 + 2), new THREE.MeshBasicMaterial({ map: texturaSombra(), transparent: true, depthWrite: false }));
-  sombra.rotation.x = -Math.PI / 2; sombra.position.y = -tel.H / 2 - .9; escena.add(sombra);
-
-  const camara = new THREE.PerspectiveCamera(32, 1, .1, 200);
-  const distancia = tel.H * 2.3;
-  camara.position.set(-distancia * .45, distancia * .12, -distancia * .9);
+  const camara = new THREE.PerspectiveCamera(32, 1, .1, 400);
   const controles = new OrbitControls(camara, renderer.domElement);
-  Object.assign(controles, { enableDamping: true, dampingFactor: .08, enablePan: false, minDistance: tel.H * .9, maxDistance: tel.H * 3.4, autoRotate: true, autoRotateSpeed: 1.6, rotateSpeed: .8 });
+  Object.assign(controles, { enableDamping: true, dampingFactor: .08, enablePan: false, autoRotate: true, autoRotateSpeed: 1.6, rotateSpeed: .8 });
+
+  let tel = null, distancia = 30, destruido = false;
+  /* Coloca el equipo (dibujado o escaneado) y ajusta cámara y sombra a su tamaño */
+  function montar(t) {
+    if (destruido) return;
+    tel = t; escena.add(tel.grupo);
+    const sombra = new THREE.Mesh(new THREE.PlaneGeometry(tel.W * 2.2, tel.D * 9 + 2), new THREE.MeshBasicMaterial({ map: texturaSombra(), transparent: true, depthWrite: false }));
+    sombra.rotation.x = -Math.PI / 2; sombra.position.y = -tel.H / 2 - .9; escena.add(sombra);
+    distancia = tel.H * 2.3;
+    camara.position.set(-distancia * .45, distancia * .12, -distancia * .9);
+    Object.assign(controles, { minDistance: tel.H * .9, maxDistance: tel.H * 3.4 });
+    ponerMarcas(listaMarcas);
+  }
+
+  /* En un escaneo, cada marca se lleva desde la caja que lo envuelve hasta la superficie real, con un rayo hacia adentro */
+  const rayo = new THREE.Raycaster();
+  const normalDe = golpe => golpe.face ? golpe.face.normal.clone().transformDirection(golpe.object.matrixWorld) : null;
+  function posicion(k) {
+    const { p, n } = ubicar(k, tel);
+    if (!tel.escaneo) return { p, n };
+    rayo.set(p.clone().addScaledVector(n, tel.H), n.clone().negate());
+    const golpe = rayo.intersectObject(tel.interior, true)[0];
+    if (!golpe) return { p, n };
+    let nn = normalDe(golpe) || n.clone();
+    if (nn.dot(n) < 0) nn.negate();
+    return { p: golpe.point.clone().addScaledVector(nn, .02), n: nn.lerp(n, .5).normalize() };
+  }
 
   /* Marcas como elementos HTML sobre el lienzo */
-  let marcas = [], globo = null, activa = -1;
+  let marcas = [], globo = null, activa = -1, listaMarcas = producto.marcas || [];
   function ponerMarcas(lista) {
+    listaMarcas = lista || [];
     marcas.forEach(m => m.punto.remove()); globo?.remove(); globo = null; activa = -1;
-    marcas = (lista || []).map((k, i) => {
-      const { p, n } = ubicar(k, tel);
+    if (!tel) { marcas = []; return; }
+    marcas = listaMarcas.map((k, i) => {
+      const { p, n } = posicion(k);
       const punto = document.createElement("button");
       punto.type = "button"; punto.className = "marca-3d"; punto.textContent = i + 1; punto.setAttribute("aria-label", `Detalle ${i + 1}: ${k.texto || "sin texto"}`);
       punto.addEventListener("click", () => enfocarMarca(i));
@@ -187,20 +338,22 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
       return { ...k, p, n, punto };
     });
   }
-  ponerMarcas(producto.marcas);
 
   /* Panel: un clic (sin arrastrar) sobre el equipo crea un detalle en ese punto */
   if (alColocar) {
-    const rayo = new THREE.Raycaster(), puntero = new THREE.Vector2();
+    const puntero = new THREE.Vector2();
     let inicio = null;
     renderer.domElement.addEventListener("pointerdown", e => { inicio = [e.clientX, e.clientY]; });
     renderer.domElement.addEventListener("pointerup", e => {
-      if (!inicio || Math.hypot(e.clientX - inicio[0], e.clientY - inicio[1]) > 5) return;
+      if (!tel || !inicio || Math.hypot(e.clientX - inicio[0], e.clientY - inicio[1]) > 5) return;
       const r = renderer.domElement.getBoundingClientRect();
       puntero.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
       rayo.setFromCamera(puntero, camara);
       const golpe = rayo.intersectObject(tel.grupo, true)[0];
-      if (golpe) alColocar(caraDe(tel.grupo.worldToLocal(golpe.point.clone()), tel));
+      if (!golpe) return;
+      let nn = normalDe(golpe);
+      if (nn && nn.dot(rayo.ray.direction) > 0) nn.negate();
+      alColocar(caraDe(tel.grupo.worldToLocal(golpe.point.clone()), tel, nn));
     });
   }
   const mostrarGlobo = i => {
@@ -236,6 +389,12 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
     if (Math.abs(m.n.z) < .5) dir.add(new THREE.Vector3(0, 0, .35)); /* lados: un poco de frente para ver el contexto */
     viajar(dir, distancia * .72, m.p.clone().multiplyScalar(.55));
     mostrarGlobo(i);
+  }
+  /* Solo escaneos: cambia cuál cara es la pantalla (voltear) o cuál lado va arriba (invertir), sin volver a descargar */
+  function orientar(o) {
+    if (!tel || !tel.escaneo) return;
+    orientarEscaneo(tel.interior, tel.analisis, tel.escala, o);
+    ponerMarcas(listaMarcas);
   }
   controles.addEventListener("start", () => { viaje = null; controles.autoRotate = false; alInteractuar(); });
 
@@ -275,13 +434,18 @@ export function crearVisor(contenedor, producto, { alMarcar = () => {}, alIntera
     }
   })();
 
-  return {
-    vista, enfocarMarca, ponerMarcas,
-    destruir() {
-      cancelAnimationFrame(raf); ro.disconnect(); controles.dispose();
-      escena.traverse(o => { o.geometry?.dispose(); const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; mats.forEach(mt => { mt.map?.dispose(); mt.emissiveMap?.dispose(); mt.dispose(); }); });
-      entorno.dispose(); pmrem.dispose(); renderer.dispose(); renderer.forceContextLoss?.();
-      renderer.domElement.remove(); marcas.forEach(m => m.punto.remove()); globo?.remove();
-    }
-  };
+  function destruir() {
+    destruido = true;
+    cancelAnimationFrame(raf); ro.disconnect(); controles.dispose();
+    escena.traverse(o => { o.geometry?.dispose(); const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []; mats.forEach(mt => { for (const k of ["map", "emissiveMap", "normalMap", "roughnessMap", "metalnessMap", "aoMap"]) mt[k]?.dispose(); mt.dispose(); }); });
+    entorno.dispose(); pmrem.dispose(); renderer.dispose(); renderer.forceContextLoss?.();
+    renderer.domElement.remove(); marcas.forEach(m => m.punto.remove()); globo?.remove();
+  }
+
+  /* «listo» se cumple cuando el equipo ya está en pantalla (al instante si es dibujado; al descargar si es escaneo) */
+  const listo = producto.escaneo
+    ? cargarEscaneo(producto, alProgreso).then(t => { if (destruido) { t.grupo.traverse(o => o.geometry?.dispose()); return; } montar(t); })
+    : Promise.resolve().then(() => montar(construirTelefono(producto)));
+
+  return { vista, enfocarMarca, ponerMarcas, orientar, destruir, listo, get esEscaneo() { return !!tel?.escaneo; } };
 }

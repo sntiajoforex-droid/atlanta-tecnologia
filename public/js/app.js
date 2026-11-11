@@ -83,7 +83,7 @@ function visibles() {
   else lista.sort((a, b) => (!!b.stock - !!a.stock) || (b.destacado - a.destacado));
   return lista;
 }
-const tiene3D = p => p.familia === "iphone" && !!p.modelo;
+const tiene3D = p => !!p.escaneo || (p.familia === "iphone" && !!p.modelo);
 
 function tarjeta(p, i) {
   const detalle = el("p", { class: "tarjeta__detalle" },
@@ -97,7 +97,7 @@ function tarjeta(p, i) {
         el("span", { class: `etiqueta etiqueta--${p.estado}`, text: p.estado === "usado" ? `Seminuevo ${p.grado || ""}` : "Nuevo" }),
       ),
       p.estado === "usado" && p.fotos.length ? el("span", { class: "etiqueta etiqueta--fotos", text: p.fotos.length > 1 ? `${p.fotos.length} fotos reales` : "Foto real" }) : null,
-      p.estado === "usado" && tiene3D(p) && el("button", { class: "tarjeta__3d", html: ICONO_3D + "<span>Ver en 3D</span>", onclick: () => abrirVisor(p) })),
+      p.estado === "usado" && tiene3D(p) && el("button", { class: "tarjeta__3d", html: ICONO_3D + `<span>${p.escaneo ? "Escaneo 3D" : "Ver en 3D"}</span>`, onclick: () => abrirVisor(p) })),
     el("div", { class: "tarjeta__cuerpo" },
       el("h3", { class: "tarjeta__nombre", text: p.nombre }), detalle,
       el("div", { class: "tarjeta__pie" },
@@ -151,7 +151,7 @@ async function abrirVisor(p) {
   $("#modal-producto").close();
   visorProducto = p;
   const usado = p.estado === "usado";
-  $("#visor-sobre").textContent = usado ? `Inspección 3D · Grado ${p.grado || ""}` : "Vista 3D";
+  $("#visor-sobre").textContent = p.escaneo ? `Escaneo 3D real${usado ? ` · Grado ${p.grado || ""}` : ""}` : usado ? `Inspección 3D · Grado ${p.grado || ""}` : "Vista 3D";
   $("#visor-titulo").textContent = `${p.nombre} · ${p.capacidad} · ${p.color.nombre}`;
   $("#visor-datos").replaceChildren(...[["Precio", pesos(p.precio)], usado && ["Batería", `${p.bateria} %`], ["Garantía", p.garantia], usado && ["Grado", p.grado]].filter(Boolean)
     .map(([a, b]) => el("div", {}, el("span", { text: a }), el("strong", { text: b }))));
@@ -160,15 +160,19 @@ async function abrirVisor(p) {
     : [el("li", { class: "visor__sin-marcas", text: usado ? "Sin detalles visibles: este equipo está como nuevo." : "Equipo nuevo, sellado de fábrica." })]));
   $("#visor-agregar").hidden = !p.stock;
   abrir($("#modal-3d"));
-  $("#visor-cargando").hidden = false;
+  const cargando = $("#visor-cargando");
+  cargando.hidden = false; cargando.textContent = p.escaneo ? "Cargando escaneo real…" : "Cargando 3D…";
   try {
     const { crearVisor } = await import("./visor3d.js");
     if (visor) visor.destruir();
-    visor = crearVisor($("#visor-escena"), p, {
+    const este = visor = crearVisor($("#visor-escena"), p, {
       alMarcar: i => $$("#visor-marcas button").forEach(b => b.classList.toggle("activa", +b.dataset.marca === i)),
-      alInteractuar: () => $("#visor-ayuda").classList.add("oculta")
+      alInteractuar: () => $("#visor-ayuda").classList.add("oculta"),
+      alProgreso: f => { cargando.textContent = `Cargando escaneo real… ${Math.round(f * 100)} %`; }
     });
-    $("#visor-cargando").hidden = true;
+    await este.listo;
+    if (visor !== este) return;
+    cargando.hidden = true;
     marcarVista("giro");
   } catch (e) {
     console.error(e);

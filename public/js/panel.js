@@ -134,6 +134,10 @@ $("#buscar").addEventListener("input", pintarProductos);
 /* ---------- Editor ---------- */
 const form = $("#form-producto"), dlg = $("#editor");
 let editando = null, marcas = [], specs = [], fotos = [], nuevas = [], visor = null, tVisor, crearVisor = null;
+/* Escaneo 3D: «escaneo» es el guardado ({archivo, voltear, invertir}); «escaneoNuevo» uno elegido que se sube al guardar */
+let escaneo = null, escaneoNuevo = null;
+const MAX_ESCANEO = 30 * 1048576;
+const escaneoVisible = () => escaneoNuevo ? { url: escaneoNuevo.url, voltear: escaneoNuevo.voltear, invertir: escaneoNuevo.invertir } : escaneo;
 for (const m of MODELOS) $("#plantilla").append(el("option", { value: m[0], text: m[0] }));
 
 const numero = v => { const n = String(v || "").replace(/[^\d]/g, ""); return n ? +n : null; };
@@ -147,7 +151,7 @@ function leerForm() {
     grado: usado ? f.grado.value : null, bateria: usado && f.bateria.value ? +f.bateria.value : null,
     incluye: f.incluye.value.split(",").map(s => s.trim()).filter(Boolean),
     specs: Object.fromEntries(specs.filter(([k, v]) => k.trim() && v.trim()).map(([k, v]) => [k.trim(), v.trim()])),
-    modelo, marcas: usado && modelo ? marcas : [], fotos: [...fotos]
+    modelo, marcas: usado && (modelo || escaneoVisible()) ? marcas : [], fotos: [...fotos], escaneo: escaneo ? { ...escaneo } : null
   };
 }
 function llenarForm(p) {
@@ -162,6 +166,7 @@ function llenarForm(p) {
   $("#plantilla").value = "";
   specs = Object.entries(p.specs || {}); marcas = (p.marcas || []).map(x => ({ ...x }));
   fotos = [...(p.fotos || [])]; nuevas.forEach(n => URL.revokeObjectURL(n.url)); nuevas = [];
+  escaneo = p.escaneo ? { ...p.escaneo } : null; if (escaneoNuevo) URL.revokeObjectURL(escaneoNuevo.url); escaneoNuevo = null;
   $$("[aria-invalid]", form).forEach(i => i.removeAttribute("aria-invalid"));
 }
 function abrirEditor(p) {
@@ -171,7 +176,7 @@ function abrirEditor(p) {
   $("#estado-editor").textContent = "";
   llenarForm(p || { familia: "iphone", estado: "usado", stock: 1, garantia: "6 meses Atlanta", grado: "A" });
   dlg.showModal(); document.body.classList.add("sin-scroll");
-  pintarSpecs(); pintarFotos(); actualizar(true);
+  pintarSpecs(); pintarFotos(); pintarEscaneo(); actualizar(true);
   form.nombre.focus();
 }
 $("#nuevo").addEventListener("click", () => abrirEditor(null));
@@ -185,7 +190,8 @@ function actualizar(rehacer3D) {
   $("#campos-modelo").hidden = !iphone; $("#campo-plantilla").hidden = !iphone;
   const nueva = !fotos.length && nuevas[0];
   $("#previa").replaceChildren(nueva ? el("img", { class: "foto", src: nueva.url, alt: "" }) : portada({ ...d, nombre: d.nombre || "Vista previa" }));
-  $("#bloque-3d").hidden = !iphone || !d.modelo;
+  const hay3D = !!escaneoVisible() || (iphone && !!d.modelo);
+  $("#bloque-3d").hidden = !hay3D;
   $("#ayuda-3d").textContent = usado ? "Toca el equipo donde está el rayón o golpe para marcarlo. Arrastra para girar." : "Vista previa del equipo en 3D. Los detalles solo se marcan en seminuevos.";
   pintarMarcas();
   if (rehacer3D) { clearTimeout(tVisor); tVisor = setTimeout(montarVisor, 350); }
@@ -193,17 +199,25 @@ function actualizar(rehacer3D) {
 async function montarVisor() {
   visor?.destruir(); visor = null;
   const d = leerForm();
-  if (!dlg.open || d.familia !== "iphone" || !d.modelo) return;
-  $("#cargando-editor").hidden = false;
+  const esc = escaneoVisible();
+  if (!dlg.open || (!esc && (d.familia !== "iphone" || !d.modelo))) return;
+  const cargando = $("#cargando-editor");
+  cargando.hidden = false; cargando.textContent = esc ? "Cargando escaneo…" : "Cargando 3D…";
   try {
     crearVisor ||= (await import("./visor3d.js")).crearVisor;
-    visor = crearVisor($("#escena-editor"), { ...d, marcas: d.estado === "usado" ? marcas : [] }, {
-      alColocar: d.estado === "usado" ? m => { marcas.push({ ...m, texto: "" }); visor.ponerMarcas(marcas); pintarMarcas(marcas.length - 1); } : null,
-      alMarcar: i => $$("#marcas li").forEach((li, j) => li.classList.toggle("activa", i === j))
+    const este = visor = crearVisor($("#escena-editor"), { ...d, escaneo: esc, marcas: d.estado === "usado" ? marcas : [] }, {
+      alColocar: d.estado === "usado" ? m => { marcas.push({ ...m, texto: "" }); este.ponerMarcas(marcas); pintarMarcas(marcas.length - 1); } : null,
+      alMarcar: i => $$("#marcas li").forEach((li, j) => li.classList.toggle("activa", i === j)),
+      alProgreso: f => { cargando.textContent = `Cargando escaneo… ${Math.round(f * 100)} %`; }
     });
-    $("#cargando-editor").hidden = true;
-    visor.vista("trasera");
-  } catch (e) { console.error(e); $("#cargando-editor").textContent = "No se pudo mostrar el 3D en este navegador."; }
+    await este.listo;
+    if (visor !== este) return;
+    cargando.hidden = true;
+    este.vista("trasera");
+  } catch (e) {
+    console.error(e);
+    cargando.textContent = esc ? "No se pudo abrir el escaneo. Revisa que sea un GLB sin compresión." : "No se pudo mostrar el 3D en este navegador.";
+  }
 }
 function pintarMarcas(enfocar = -1) {
   const usado = form.estado.value === "usado";
@@ -270,6 +284,44 @@ zona.addEventListener("dragover", e => { e.preventDefault(); zona.classList.add(
 zona.addEventListener("dragleave", () => zona.classList.remove("encima"));
 zona.addEventListener("drop", e => { e.preventDefault(); zona.classList.remove("encima"); agregarFotos(e.dataTransfer.files); });
 
+/* ---------- Escaneo 3D del editor ---------- */
+const mb = n => n < 1048576 ? Math.max(1, Math.round(n / 1024)) + " KB" : (n / 1048576).toLocaleString("es-CO", { maximumFractionDigits: 1 }) + " MB";
+function pintarEscaneo() {
+  const esc = escaneoVisible();
+  $("#escaneo-actual").hidden = !esc; $("#soltar-escaneo").hidden = !!esc;
+  if (!esc) return;
+  $("#escaneo-nombre").textContent = escaneoNuevo ? escaneoNuevo.archivo.name : "Escaneo real cargado";
+  $("#escaneo-detalle").textContent = escaneoNuevo ? `${mb(escaneoNuevo.archivo.size)} · se sube al guardar` : "Se ve en la tienda en lugar del equipo dibujado";
+  $("#escaneo-voltear").setAttribute("aria-pressed", String(!!esc.voltear));
+  $("#escaneo-invertir").setAttribute("aria-pressed", String(!!esc.invertir));
+}
+async function elegirEscaneo(archivo) {
+  if (!archivo) return;
+  if (archivo.size > MAX_ESCANEO) return avisar(`El escaneo pesa ${mb(archivo.size)}. El máximo es 30 MB: expórtalo con menos detalle.`);
+  const cabeza = new TextDecoder().decode(await archivo.slice(0, 4).arrayBuffer());
+  if (cabeza !== "glTF") return avisar(/\.(gltf|obj|usdz|fbx|stl|ply)$/i.test(archivo.name) ? "Ese formato no sirve: en la app de escaneo exporta como GLB." : "El archivo debe ser un escaneo .glb");
+  if (escaneoNuevo) URL.revokeObjectURL(escaneoNuevo.url);
+  escaneoNuevo = { archivo, url: URL.createObjectURL(archivo), voltear: false, invertir: false };
+  pintarEscaneo(); actualizar(true);
+}
+const girarEscaneo = clave => {
+  const esc = escaneoNuevo || escaneo; if (!esc) return;
+  esc[clave] = !esc[clave];
+  pintarEscaneo();
+  if (visor?.esEscaneo) visor.orientar(escaneoVisible()); else actualizar(true);
+};
+$("#escaneo-voltear").addEventListener("click", () => girarEscaneo("voltear"));
+$("#escaneo-invertir").addEventListener("click", () => girarEscaneo("invertir"));
+$("#escaneo-quitar").addEventListener("click", () => {
+  if (escaneoNuevo) { URL.revokeObjectURL(escaneoNuevo.url); escaneoNuevo = null; } else escaneo = null;
+  pintarEscaneo(); actualizar(true);
+});
+$("#elegir-escaneo").addEventListener("change", e => { elegirEscaneo(e.target.files[0]); e.target.value = ""; });
+const zonaEsc = $("#soltar-escaneo");
+zonaEsc.addEventListener("dragover", e => { e.preventDefault(); zonaEsc.classList.add("encima"); });
+zonaEsc.addEventListener("dragleave", () => zonaEsc.classList.remove("encima"));
+zonaEsc.addEventListener("drop", e => { e.preventDefault(); zonaEsc.classList.remove("encima"); elegirEscaneo(e.dataTransfer.files[0]); });
+
 $("#agregar-spec").addEventListener("click", () => { if (specs.length >= 8) return avisar("Máximo 8 características"); specs.push(["", ""]); pintarSpecs(); $("#specs li:last-child input").focus(); });
 
 $("#plantilla").addEventListener("change", e => {
@@ -307,6 +359,17 @@ form.addEventListener("submit", async e => {
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { guardarEnLista(); fotos = [...p.fotos]; pintarFotos(); pintarProductos(); throw new Error(j.error || "No se pudo subir una foto"); }
       p = j; URL.revokeObjectURL(f.url); nuevas.shift();
+    }
+    if (escaneoNuevo) {
+      const n = escaneoNuevo;
+      estado.textContent = `Subiendo escaneo 3D (${mb(n.archivo.size)})… no cierres esta ventana`;
+      const r = await fetch(`/api/admin/productos/${encodeURIComponent(p.id)}/escaneo`, { method: "POST", credentials: "same-origin", headers: { "X-Atlanta": "1", "Content-Type": "model/gltf-binary" }, body: n.archivo });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { guardarEnLista(); fotos = [...p.fotos]; pintarFotos(); pintarProductos(); throw new Error(j.error || (r.status === 413 ? "El escaneo pesa demasiado (máx. 30 MB)" : "No se pudo subir el escaneo")); }
+      p = j; URL.revokeObjectURL(n.url); escaneoNuevo = null; escaneo = p.escaneo;
+      /* El servidor lo guarda derecho por defecto: si se giró antes de subir, se guarda ese giro */
+      if (n.voltear || n.invertir || d.marcas.length) { escaneo = { ...p.escaneo, voltear: n.voltear, invertir: n.invertir }; p = await api("PUT", `/productos/${encodeURIComponent(p.id)}`, { ...d, fotos: p.fotos, escaneo, marcas: d.marcas }); escaneo = p.escaneo; }
+      editando = p;
     }
     guardarEnLista();
     dlg.close(); pintarProductos(); avisar(existia ? "Cambios guardados" : "Producto creado");

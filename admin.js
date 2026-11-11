@@ -102,7 +102,7 @@ function crearPanel({ ipCliente, limite }) {
 
   const buscar = id => { const lista = cat.leer(), i = lista.findIndex(p => p.id === id); return { lista, i }; };
   r.post("/productos", soloDueno, (req, res) => {
-    const p = cat.limpiarProducto({ ...req.body, id: cat.nuevoId(req.body || {}), fotos: [] });
+    const p = cat.limpiarProducto({ ...req.body, id: cat.nuevoId(req.body || {}), fotos: [], escaneo: null });
     if (!p) return res.status(400).json({ error: "Revisa nombre, tipo, estado y precio" });
     cat.guardar([...cat.leer(), p]);
     cat.registrar(req.usuario.nombre, "creó", { id: p.id, nombre: p.nombre, precio: p.precio });
@@ -112,10 +112,13 @@ function crearPanel({ ipCliente, limite }) {
     const { lista, i } = buscar(req.params.id);
     if (i < 0) return res.status(404).json({ error: "No existe" });
     /* Las fotos solo se pueden reordenar o quitar: las que no existan en disco se ignoran */
-    const p = cat.limpiarProducto({ ...req.body, id: lista[i].id, fotos: (Array.isArray(req.body && req.body.fotos) ? req.body.fotos : []).filter(cat.fotoExiste) });
+    /* El escaneo solo se puede girar o quitar aquí (se sube por su propia ruta) */
+    const e = req.body && req.body.escaneo, actual = lista[i].escaneo;
+    const escaneo = e && actual && e.archivo === actual.archivo && cat.escaneoExiste(actual.archivo) ? e : null;
+    const p = cat.limpiarProducto({ ...req.body, id: lista[i].id, escaneo, fotos: (Array.isArray(req.body && req.body.fotos) ? req.body.fotos : []).filter(cat.fotoExiste) });
     if (!p) return res.status(400).json({ error: "Revisa nombre, tipo, estado y precio" });
     const antes = lista[i]; lista[i] = p; cat.guardar(lista);
-    cat.limpiarFotos(p.id, p.fotos);
+    cat.limpiarFotos(p.id, p.fotos); cat.limpiarEscaneos(p.id, p.escaneo && p.escaneo.archivo);
     cat.registrar(req.usuario.nombre, "editó", { id: p.id, nombre: p.nombre, ...(antes.precio !== p.precio ? { precio: `${antes.precio} → ${p.precio}` } : {}) });
     res.json(p);
   });
@@ -153,10 +156,23 @@ function crearPanel({ ipCliente, limite }) {
     cat.registrar(req.usuario.nombre, "subió foto", { id: lista[i].id, nombre: lista[i].nombre });
     res.status(201).json(lista[i]);
   });
+  /* Escaneo 3D real: un GLB por producto. Reemplaza al anterior */
+  r.post("/productos/:id/escaneo", soloDueno, express.raw({ type: () => true, limit: "30mb" }), (req, res) => {
+    const { lista, i } = buscar(req.params.id);
+    if (i < 0) return res.status(404).json({ error: "No existe" });
+    const motivo = cat.revisarGlb(req.body);
+    if (motivo) return res.status(415).json({ error: motivo });
+    const nombre = `${lista[i].id}-${crypto.randomBytes(6).toString("hex")}.glb`;
+    fs.writeFileSync(path.join(cat.MODELOS, nombre), req.body, { flag: "wx" });
+    lista[i] = cat.limpiarProducto({ ...lista[i], escaneo: { archivo: nombre } }); cat.guardar(lista);
+    cat.limpiarEscaneos(lista[i].id, nombre);
+    cat.registrar(req.usuario.nombre, "subió escaneo 3D", { id: lista[i].id, nombre: lista[i].nombre, peso: `${(req.body.length / 1048576).toFixed(1)} MB` });
+    res.status(201).json(lista[i]);
+  });
   r.delete("/productos/:id", soloDueno, (req, res) => {
     const { lista, i } = buscar(req.params.id);
     if (i < 0) return res.status(404).json({ error: "No existe" });
-    const [p] = lista.splice(i, 1); cat.guardar(lista); cat.limpiarFotos(p.id);
+    const [p] = lista.splice(i, 1); cat.guardar(lista); cat.limpiarFotos(p.id); cat.limpiarEscaneos(p.id);
     cat.registrar(req.usuario.nombre, "eliminó", { id: p.id, nombre: p.nombre });
     res.json({ ok: true });
   });

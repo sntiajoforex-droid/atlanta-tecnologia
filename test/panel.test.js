@@ -169,3 +169,63 @@ test("fotos: se validan por contenido, se sirven seguras y se borran con el prod
   await pedir("DELETE", `/productos/${p.id}`, { cookie: s });
   assert.equal(fs.readdirSync(path.join(tmp, "fotos")).filter(x => x.startsWith(p.id)).length, 0, "al eliminar el producto se van sus fotos");
 });
+
+/* GLB mínimo: cabecera + trozo JSON (+ trozo binario opcional) */
+const hacerGlb = (json, bin = Buffer.alloc(0)) => {
+  const pad = (b, c) => Buffer.concat([b, Buffer.alloc((4 - b.length % 4) % 4, c)]);
+  const J = pad(Buffer.from(JSON.stringify(json)), 0x20), B = pad(bin, 0);
+  const ch = (largo, tipo) => { const b = Buffer.alloc(8); b.writeUInt32LE(largo, 0); b.writeUInt32LE(tipo, 4); return b; };
+  const partes = [ch(J.length, 0x4e4f534a), J, ...(B.length ? [ch(B.length, 0x004e4942), B] : [])];
+  const cab = Buffer.alloc(12); cab.write("glTF", 0, "latin1"); cab.writeUInt32LE(2, 4);
+  const todo = Buffer.concat([cab, ...partes]); todo.writeUInt32LE(todo.length, 8);
+  return todo;
+};
+const glbBase = { asset: { version: "2.0" }, meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }], buffers: [{ byteLength: 36 }] };
+
+test("escaneo 3D: se valida como GLB, se sirve, se reemplaza y se borra con el producto", async () => {
+  ponerUsuario("dueno8", "dueno", "clave-8"); ponerUsuario("emple8", "empleado", "clave-e8");
+  const s = (await entrar("dueno8", "clave-8", "10.4.0.1")).cookie, e = (await entrar("emple8", "clave-e8", "10.4.0.2")).cookie;
+  const p = await (await pedir("POST", "/productos", { cookie: s, cuerpo: { ...usado, escaneo: { archivo: "otro-0123456789ab.glb" } } })).json();
+  assert.equal(p.escaneo, null, "al crear no se puede apuntar a un escaneo");
+  const subir = (cuerpo, cookie = s, csrf = true) => fetch(`${base}/api/admin/productos/${p.id}/escaneo`, { method: "POST",
+    headers: { "Content-Type": "model/gltf-binary", Cookie: cookie, "X-Forwarded-For": "10.4.0.3", ...(csrf ? { "X-Atlanta": "1" } : {}) }, body: cuerpo });
+  const bueno = hacerGlb(glbBase, Buffer.alloc(36));
+  const enDisco = () => fs.readdirSync(path.join(tmp, "modelos3d")).filter(x => x.startsWith(p.id));
+
+  assert.equal((await subir(Buffer.from("<html>no soy un glb</html>"))).status, 415, "no es GLB");
+  assert.equal((await subir(Buffer.concat([bueno, Buffer.alloc(8)]))).status, 415, "el largo declarado no coincide");
+  assert.equal((await subir(hacerGlb({ ...glbBase, buffers: [{ byteLength: 36, uri: "https://malo.example/x.bin" }] }))).status, 415, "pide archivos externos");
+  assert.equal((await subir(hacerGlb({ ...glbBase, images: [{ uri: "data:image/png;base64,AAAA" }] }))).status, 415, "imagen por uri");
+  const draco = await subir(hacerGlb({ ...glbBase, extensionsRequired: ["KHR_draco_mesh_compression"] }));
+  assert.equal(draco.status, 415); assert.match((await draco.json()).error, /comprimido/);
+  assert.equal((await subir(hacerGlb({ asset: { version: "2.0" } }))).status, 415, "sin mallas");
+  assert.equal((await subir(bueno, e)).status, 403, "el empleado no sube escaneos");
+  assert.equal((await subir(bueno, s, false)).status, 403, "sin cabecera del panel");
+  assert.equal((await subir(Buffer.alloc(31 * 1024 * 1024))).status, 413, "más de 30 MB");
+
+  let r = await subir(bueno); assert.equal(r.status, 201);
+  const primero = (await r.json()).escaneo;
+  assert.match(primero.archivo, new RegExp(`^${p.id}-[0-9a-f]{12}\.glb$`));
+  assert.deepEqual(primero, { archivo: primero.archivo, voltear: false, invertir: false });
+  const f = await fetch(`${base}/modelos3d/${primero.archivo}`);
+  assert.equal(f.status, 200); assert.equal(f.headers.get("content-type"), "model/gltf-binary");
+  assert.match(f.headers.get("cache-control"), /immutable/);
+  assert.ok(Buffer.from(await f.arrayBuffer()).equals(bueno));
+  for (const malo of ["/modelos3d/..%2fusuarios.json", "/modelos3d/../usuarios.json"]) assert.notEqual((await fetch(base + malo)).status, 200, malo);
+
+  /* Girar y marcar detalles sobre el escaneo; un nombre ajeno no reemplaza el propio */
+  let ed = await (await pedir("PUT", `/productos/${p.id}`, { cookie: s, cuerpo: { ...usado, modelo: null, escaneo: { ...primero, voltear: true } } })).json();
+  assert.deepEqual(ed.escaneo, { ...primero, voltear: true }); assert.equal(ed.marcas.length, 1, "las marcas valen sobre el escaneo aunque no haya medidas");
+  ed = await (await pedir("PUT", `/productos/${p.id}`, { cookie: s, cuerpo: { ...usado, escaneo: { archivo: `${p.id}-ffffffffffff.glb` } } })).json();
+  assert.equal(ed.escaneo, null, "un archivo que no es el suyo se descarta");
+  assert.equal(enDisco().length, 0, "y el que se quitó se borra del disco");
+
+  /* Subir otro reemplaza al anterior */
+  await subir(bueno); const segundo = (await (await subir(bueno)).json()).escaneo;
+  assert.deepEqual(enDisco(), [segundo.archivo]);
+  const publico = (await (await fetch(base + "/api/productos")).json()).find(x => x.id === p.id);
+  assert.equal(publico.escaneo.archivo, segundo.archivo);
+
+  await pedir("DELETE", `/productos/${p.id}`, { cookie: s });
+  assert.equal(enDisco().length, 0, "al eliminar el producto se va su escaneo");
+});
